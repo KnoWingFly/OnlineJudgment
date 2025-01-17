@@ -1,0 +1,275 @@
+#!/usr/bin/python3
+
+import sys, signal, os, subprocess, logging
+from pathlib import Path
+import time
+
+# Configure logging
+LOG_FILE = 'judge.log'
+logging.basicConfig(
+    filename=LOG_FILE,
+    level=logging.DEBUG,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+
+# Constants
+PROBLEMDIR = 'problems'
+TIME_LIMIT = 100 # seconds
+COMPILATION_TIME_LIMIT = 30  # seconds
+MAX_OUTPUT_SIZE = 10 * 1024 * 1024  # 10MB
+
+# Verdicts
+VERDICT = {
+    'CORRECT': 0,        # Accepted
+    'COMPILE_ERROR': 1,  # Compile Error
+    'WRONG': 2,         # Wrong Answer
+    'TIME_EXCEEDED': 3,  # Time Limit
+    'ILLEGAL_FILE': 4,  # Invalid File
+    'RTE': 5           # Runtime Error
+}
+
+def debug(msg):
+    """Log debug messages"""
+    logging.debug(msg)
+    print(msg, file=sys.stderr)
+
+def compile_code(sourcefile, ext):
+    """Compile the submitted code"""
+    try:
+        debug(f"Starting compilation of {sourcefile}")
+        # Get absolute paths
+        source_path = os.path.abspath(sourcefile)
+        work_dir = os.path.dirname(source_path)
+        output_path = os.path.join(work_dir, "a.out")
+        
+        if ext == "cpp":
+            cmd = ["g++", "-Wall", "-O2", "-std=c++17", source_path, "-o", output_path]
+        elif ext == "c":
+            cmd = ["gcc", "-Wall", "-O2", "-std=c11", source_path, "-o", output_path]
+        elif ext == "py":
+            try:
+                subprocess.run(["python3", "-m", "py_compile", source_path], 
+                             check=True, capture_output=True, timeout=10)
+                return True, None
+            except subprocess.CalledProcessError as e:
+                debug(f"Python syntax error: {e.stderr}")
+                return False, None
+        elif ext == "java":
+            # For Java, we compile to class file in the same directory
+            class_name = os.path.splitext(os.path.basename(source_path))[0]
+            cmd = ["javac", source_path]
+            output_path = os.path.join(work_dir, f"{class_name}.class")
+        elif ext == "go":
+            # For Go, we compile to binary
+            cmd = ["go", "build", "-o", output_path, source_path]
+        else:
+            debug(f"Unsupported file extension: {ext}")
+            return False, None
+
+        debug(f"Running compilation command: {' '.join(cmd)}")
+        debug(f"Working directory: {work_dir}")
+        result = subprocess.run(cmd, 
+                              capture_output=True, 
+                              text=True, 
+                              timeout=COMPILATION_TIME_LIMIT,
+                              cwd=work_dir)
+        
+        if result.returncode != 0:
+            debug(f"Compilation failed with error:\n{result.stderr}")
+            return False, None
+        
+        # Verify the output file exists for compiled languages
+        if ext in ["c", "cpp", "go"]:
+            if not os.path.exists(output_path):
+                debug(f"Compilation appeared to succeed but no output file was created at {output_path}")
+                return False, None
+        elif ext == "java":
+            if not os.path.exists(output_path):
+                debug(f"Java compilation succeeded but class file not found at {output_path}")
+                return False, None
+            
+        debug(f"Compilation successful, output at: {output_path}")
+        return True, output_path
+        
+    except subprocess.TimeoutExpired:
+        debug("Compilation timed out")
+        return False, None
+    except Exception as e:
+        debug(f"Compilation error: {str(e)}")
+        return False, None
+
+def run_solution(executable_path, infile, outfile, sourcefile=None):
+    """Run the compiled solution"""
+    try:
+        debug(f"Starting solution execution with executable: {executable_path}")
+        start_time = time.time()
+        
+        # Verify input file exists and is readable
+        if not os.path.isfile(infile):
+            debug(f"Input file not found: {infile}")
+            return False, 0
+        
+        # Get work directory
+        work_dir = os.path.dirname(executable_path) if executable_path else os.getcwd()
+        
+        with open(infile, 'r') as fin, open(outfile, 'w') as fout:
+            # Determine command based on file type
+            if sourcefile and sourcefile.endswith('.py'):
+                cmd = ["python3", sourcefile]
+            elif sourcefile and sourcefile.endswith('.java'):
+                class_name = os.path.splitext(os.path.basename(sourcefile))[0]
+                cmd = ["java", "-cp", work_dir, class_name]
+            elif executable_path:
+                cmd = [executable_path]
+            else:
+                debug("No valid command could be determined")
+                return False, 0
+                
+            process = subprocess.run(
+                cmd,
+                stdin=fin,
+                stdout=fout,
+                stderr=subprocess.PIPE,
+                timeout=TIME_LIMIT,
+                text=True,
+                cwd=work_dir
+            )
+            
+        execution_time = time.time() - start_time
+        debug(f"Execution completed in {execution_time:.3f} seconds")
+        
+        if process.returncode != 0:
+            debug(f"Runtime error: {process.stderr}")
+            return False, execution_time
+            
+        return True, execution_time
+        
+    except subprocess.TimeoutExpired:
+        debug("Time limit exceeded")
+        return False, TIME_LIMIT
+    except Exception as e:
+        debug(f"Runtime error: {str(e)}")
+        return False, 0
+
+def compare_output(output_file, expected_file):
+    """Compare output with expected result"""
+    try:
+        debug("Comparing output files")
+        if not os.path.exists(output_file):
+            debug(f"Output file not found: {output_file}")
+            return False
+        if not os.path.exists(expected_file):
+            debug(f"Expected output file not found: {expected_file}")
+            return False
+            
+        with open(output_file, 'r') as f1, open(expected_file, 'r') as f2:
+            # Read all lines and store them
+            output_lines = f1.readlines()
+            expected_lines = f2.readlines()
+            
+            debug(f"Number of lines in output: {len(output_lines)}")
+            debug(f"Number of lines in expected: {len(expected_lines)}")
+            
+            # Strip whitespace and filter empty lines
+            output = [line.strip() for line in output_lines if line.strip()]
+            expected = [line.strip() for line in expected_lines if line.strip()]
+            
+            debug("Processed output:")
+            for i, line in enumerate(output):
+                debug(f"Output line {i+1}: '{line}'")
+            
+            debug("Expected output:")
+            for i, line in enumerate(expected):
+                debug(f"Expected line {i+1}: '{line}'")
+            
+            if output != expected:
+                debug("Output mismatch detected!")
+                # Show detailed comparison
+                if len(output) != len(expected):
+                    debug(f"Line count mismatch: output has {len(output)} lines, expected has {len(expected)} lines")
+                else:
+                    for i, (out_line, exp_line) in enumerate(zip(output, expected)):
+                        if out_line != exp_line:
+                            debug(f"Mismatch at line {i+1}:")
+                            debug(f"Expected: '{exp_line}'")
+                            debug(f"Got: '{out_line}'")
+                return False
+                
+            debug("Output matches expected result!")
+            return True
+            
+    except Exception as e:
+        debug(f"Error comparing files: {str(e)}")
+        return False
+
+def main():
+    executable_path = None
+    output_file = None
+    try:
+        debug("Judge script started")
+        if len(sys.argv) != 3:
+            debug("Usage: ./onj <sourcefile> <problem>")
+            sys.exit(VERDICT['ILLEGAL_FILE'])
+
+        sourcefile = sys.argv[1]
+        problem = sys.argv[2]
+        debug(f"Processing submission: {sourcefile} for problem {problem}")
+        
+        # Validate file exists
+        if not os.path.isfile(sourcefile):
+            debug(f"Source file not found: {sourcefile}")
+            sys.exit(VERDICT['ILLEGAL_FILE'])
+
+        # Get file extension
+        ext = sourcefile.split(".")[-1].lower()
+        if ext not in ["c", "cpp", "py", "java", "go"]:
+            debug(f"Unsupported file extension: {ext}")
+            sys.exit(VERDICT['ILLEGAL_FILE'])
+
+        # Check problem files exist
+        infile = os.path.abspath(f"{PROBLEMDIR}/{problem}/in")
+        expected_file = os.path.abspath(f"{PROBLEMDIR}/{problem}/out")
+        if not os.path.isfile(infile) or not os.path.isfile(expected_file):
+            debug("Problem input/output files not found")
+            sys.exit(VERDICT['ILLEGAL_FILE'])
+
+        # Compile if needed
+        success, executable_path = compile_code(sourcefile, ext)
+        if not success:
+            sys.exit(VERDICT['COMPILE_ERROR'])
+
+        # Prepare for execution
+        work_dir = os.path.dirname(os.path.abspath(sourcefile))
+        output_file = os.path.join(work_dir, "output.txt")
+        
+        # Run solution
+        success, execution_time = run_solution(executable_path, infile, output_file, sourcefile)
+        if not success:
+            if execution_time >= TIME_LIMIT:
+                sys.exit(VERDICT['TIME_EXCEEDED'])
+            sys.exit(VERDICT['RTE'])
+
+        # Compare output
+        if compare_output(output_file, expected_file):
+            print(f"{execution_time:.3f}")  # Print execution time
+            sys.exit(VERDICT['CORRECT'])
+        else:
+            print(f"{execution_time:.3f}")  # Print execution time
+            sys.exit(VERDICT['WRONG'])
+
+    except Exception as e:
+        debug(f"Unexpected error: {str(e)}")
+        sys.exit(VERDICT['RTE'])
+    finally:
+        # Cleanup
+        try:
+            if executable_path and os.path.exists(executable_path):
+                os.remove(executable_path)
+            if output_file and os.path.exists(output_file):
+                os.remove(output_file)
+        except Exception as e:
+            debug(f"Cleanup error: {str(e)}")
+            pass
+
+if __name__ == "__main__":
+    main()
