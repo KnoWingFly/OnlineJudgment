@@ -47,17 +47,16 @@
 	}
 
 	function getLeaders() {
-		$.get("getleaders.php", function (data) {
+		$.get("../getleaders.php", function (data) {
 			$("#leaders").html(data);
 		});
 	}
 
 	function getDetails() {
-		$.get("getdetails.php", function (data) {
+		$.get("../getdetails.php", function (data) {
 			$("#details").html(data);
 		});
 	}
-
 	function getScores() {
 		$.ajax({
 			url: 'getscores.php',

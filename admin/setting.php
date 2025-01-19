@@ -105,6 +105,9 @@ mysqli_close($cn);
     <meta name="keywords" content="programming, contest, coding, judge">
     <link rel="stylesheet" href="../images/Envision.css">
     <link rel="stylesheet" href="../images/Tabs.css">
+    <script type="text/javascript" src="../jquery-1.3.1.js"></script>
+    <script type="text/javascript" src="../jquery.timers-1.1.2.js"></script>
+    <?php include('../timer.php'); ?>
     <title>Programming Contest - Admin Settings</title>
     
     <style>
@@ -189,12 +192,41 @@ mysqli_close($cn);
         border-radius: 3px;
     }
     </style>
+
+    <script type="text/javascript">
+    $(document).ready(function() { 
+        // Initial setup
+        dispTime();
+        
+        // Set intervals for updates
+        setInterval("dispTime()", 1000);
+        setInterval("getLeaders()", getLeaderInterval);
+        setInterval("getDetails()", getLeaderInterval);
+
+        // Menu highlighting
+        $("#menu7").addClass("current");
+    });
+    </script>
 </head>
 
 <body class="menu7">
 <div id="wrap">
     <?php include('../header.php'); ?>
-    <?php include('../menu.php'); ?>
+    
+    <!-- menu -->    
+    <div id="menu">
+        <ul>
+            <?php if(!isset($_SESSION['isloggedin'])) print '<li id="menu1"><a href="../login.php">Login</a></li>'; ?>
+            <?php if(isset($_SESSION['isloggedin'])) print '<li id="menu2"><a href="../index.php">Problems</a></li>'; ?>
+            <?php if(isset($_SESSION['isloggedin'])) print '<li id="menu3"><a href="../submissions.php">Submissions</a></li>'; ?>
+            <?php if(isset($_SESSION['isloggedin'])) print '<li id="menu4"><a href="../scoreboard.php">Scoreboard</a></li>'; ?>
+            <li id="menu5"><a href="../faq.php">FAQ</a></li>    
+            <?php if(isset($_SESSION['isloggedin'])) print '<li id="menu6"><a href="../chat.php">Chat</a></li>'; ?>
+            <?php if(isset($_SESSION['admin'])) print '<li id="menu7"><a href="admin.php">Admin</a></li>'; ?>
+            <?php if(isset($_SESSION['isloggedin'])) print '<li id="menu8"><a href="../personal.php">Personal</a></li>'; ?>
+            <?php if(isset($_SESSION['isloggedin'])) print '<li id="menu9"><a href="../logout.php">Logout</a></li>'; ?>
+        </ul>
+    </div>
     
     <div id="content-wrap">
         <div id="main">
@@ -256,6 +288,7 @@ mysqli_close($cn);
                 <li><a href="users.php">Manage Users</a></li>
                 <li><a href="settings.php">Contest Settings</a></li>
             </ul>
+
             <?php include('../sidebar.php'); ?>    
         </div>
     </div>
