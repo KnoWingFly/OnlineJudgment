@@ -263,16 +263,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             mysqli_real_escape_string($cn, $_POST['constraints'])
         );
 
-        // Inside your try block, modify the query execution part:
+        // Modified query to include points
         debug_log("Inserting problem into database");
-        $query = "INSERT INTO problems (title, time_limit, memory_limit, created_at) 
-             VALUES (?, ?, ?, NOW())";
+        $query = "INSERT INTO problems (title, time_limit, memory_limit, points, created_at) 
+             VALUES (?, ?, ?, ?, NOW())";
         $stmt = mysqli_prepare($cn, $query);
         if (!$stmt) {
             throw new Exception("Prepare failed: " . mysqli_error($cn));
         }
 
-        mysqli_stmt_bind_param($stmt, "sdi", $title, $timeLimit, $memoryLimit);
+        mysqli_stmt_bind_param($stmt, "sdii", $title, $timeLimit, $memoryLimit, $points);
 
         if (!mysqli_stmt_execute($stmt)) {
             throw new Exception("Database insert failed: " . mysqli_error($cn));
@@ -315,15 +315,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         if (!saveUploadedFile($_FILES["solution"], $problemId, "solution.cpp")) {
             throw new Exception("Failed to save solution file");
-        }
-
-        debug_log("Adding points");
-        $query = "INSERT INTO problem_points (problem_id, points) VALUES (?, ?)";
-        $stmt = mysqli_prepare($cn, $query);
-        mysqli_stmt_bind_param($stmt, "ii", $problemId, $points);
-
-        if (!mysqli_stmt_execute($stmt)) {
-            throw new Exception("Failed to insert points: " . mysqli_error($cn));
         }
 
         debug_log("Running compile and test");
@@ -556,7 +547,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <?php include('../footer.php'); ?>
         </div>
     </div>
-
 </body>
 
 </html>

@@ -13,6 +13,7 @@
 1. Place these files in a directory under your web root
 2. Edit `setup` and set the variables to appropriate values
 3. Run `./setup`
+4. If you need the database for its, just import from "onj.sql"
 
 ## System Compatibility
 | Platform | Status | Notes |
