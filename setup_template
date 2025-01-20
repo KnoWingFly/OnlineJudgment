@@ -5,7 +5,7 @@
 #
 
 # Your database username
-DBUSER=root
+DBUSER=
 
 # Your database password
 DBPASS=

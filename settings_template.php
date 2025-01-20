@@ -6,11 +6,11 @@
 */
 
 	//The user name of your database
-	$DBUSER = 'root';
+	$DBUSER = '';
 	//The password of your database
 	$DBPASS = '';
 	//The name of the database
-	$DBNAME = 'onj';
+	$DBNAME = '';
 
 	//The point values of the problems
 	//Set it to the values you wish to use
