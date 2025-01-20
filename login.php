@@ -165,8 +165,8 @@ if(isset($_POST['register'])) {
 
 <body class="menu1">
 <div id="wrap">
-    <?php include('header.php'); ?>
-    <?php include('menu.php'); ?>
+    <?php include('Layout/header.php'); ?>
+    <?php include('Layout/menu.php'); ?>
     
     <div id="content-wrap">
         <div id="main">
