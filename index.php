@@ -143,8 +143,8 @@ $problemid = ($problemid > 0 && $problemid <= count($points)) ? $problemid : 1;
 
 <body class="menu2" id="tab<?php echo $problemid; ?>">
 <div id="wrap">
-    <?php include('header.php'); ?>
-    <?php include('menu.php'); ?>
+    <?php include('Layout/header.php'); ?>
+    <?php include('Layout/menu.php'); ?>
 
     <div id="content-wrap">
         <div id="main">
@@ -200,7 +200,7 @@ $problemid = ($problemid > 0 && $problemid <= count($points)) ? $problemid : 1;
     </div>
 
     <div id="footer">
-        <?php include('footer.php'); ?>
+        <?php include('Layout/footer.php'); ?>
     </div>
 </div>
 </body>
