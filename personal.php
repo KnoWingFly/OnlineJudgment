@@ -78,10 +78,10 @@ $(document).ready(function(){
 <div id="wrap">
 		
 		<!--header -->
-		<?php include('header.php'); ?>
+		<?php include('Layout/header.php'); ?>
 		
 		<!-- menu -->	
-		<?php include('menu.php'); ?>
+		<?php include('Layout/menu.php'); ?>
 			
 		<!-- content-wrap starts here -->
 		<div id="content-wrap">
@@ -159,7 +159,7 @@ EOL;
 					
 		<!--footer starts here-->
 		<div id="footer">
-			<?php include('footer.php'); ?>
+			<?php include('Layout/footer.php'); ?>
 		</div>	
 
 <!-- wrap ends here -->
