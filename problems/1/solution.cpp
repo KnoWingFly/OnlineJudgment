@@ -1,55 +1,60 @@
 #include <stdio.h>
 #include <string.h>
-#include <vector>
-#include <unordered_map>
-
-using namespace std;
-
-class Solution {
-public:
-    vector<int> twoSum(vector<int>& nums, int target) {
-        unordered_map<int, int> numMap;
-        int n = nums.size();
-
-        // Build the hash table
-        for (int i = 0; i < n; i++) {
-            numMap[nums[i]] = i;
-        }
-
-        // Find the complement
-        for (int i = 0; i < n; i++) {
-            int complement = target - nums[i];
-            if (numMap.count(complement) && numMap[complement] != i) {
-                return {i, numMap[complement]};
-            }
-        }
-
-        return {}; 
-    }
+struct cons{
+    int m,t;
 };
 
-int main() {
-    freopen("in", "r", stdin);
-    freopen("out", "w", stdout);
+cons ko[10010];
 
-    int c;
-    scanf("%d", &c);
-    Solution solution;
+int K[10010][10010];
+int ans[10010][10010];
+int n,l,j,c;
+int max(int a,int b){
+    return a > b ? a : b;
+}
+int solve(int W, int n)
+{
+    int i, w;
 
-    for (int i = 0; i < c; i++) {
-        int n, target;
-        scanf("%d %d", &n, &target);
-        vector<int> nums(n);
-        for (int j = 0; j < n; j++) {
-            scanf("%d", &nums[j]);
+  // memset(K,0,sizeof(K));
+ //  memset(ans,0,sizeof(K));
+   for (i = 0; i <= n; i++)
+   {
+       for (w = 0; w <= W; w++)
+       {
+           if (i==0 || w==0){
+               K[i][w] = 0;
+               ans[i][w] = 0;
+
+           }
+           else if (ko[i-1].t <= w){
+                K[i][w] = max(ko[i-1].m + K[i-1][w-ko[i-1].t],  K[i-1][w]);
+                if(ko[i-1].m + K[i-1][w-ko[i-1].t] >  K[i-1][w]) ans[i][w] = ans[i-1][w]+1;
+                else ans[i][w] = ans[i-1][w];
+           }
+           else{
+                 K[i][w] = K[i-1][w];
+                ans[i][w] = ans[i-1][w];
+           }
+
+       }
+   }
+   return K[n][W];
+}
+
+int main(){
+    freopen("in","r",stdin);
+    freopen("out","w",stdout);
+    scanf("%d",&c);
+    for(int i = 0; i < c;i++){
+
+        scanf("%d %d %d",&n,&l,&j);
+        for(int k = 0; k < n;k++){
+            scanf("%d %d",&ko[k].m,&ko[k].t);
+
         }
-        vector<int> result = solution.twoSum(nums, target);
-        if (!result.empty()) {
-            printf("Case #%d: %d %d\n", i + 1, result[0], result[1]);
-        } else {
-            printf("Case #%d: No solution\n", i + 1);
-        }
+        printf("Case #%d : %d\n",i+1,solve(j,l));
+
     }
 
-    return 0;
 }

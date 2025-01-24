@@ -3,7 +3,7 @@
 #include <time.h>
 int main(){
     int n;
-    freopen("in","w",stdout);
+    // freopen("in","w",stdout);
     srand(time(NULL));
     printf("%d\n",20);
     for(int i = 0; i < 20;i++){

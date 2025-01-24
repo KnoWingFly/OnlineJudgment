@@ -1,4 +1,4 @@
 settings.php
 setup
 .vscode
-.log
+*.log

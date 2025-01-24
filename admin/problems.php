@@ -217,7 +217,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $required_fields = [
             'title',
             'timeLimit',
-            'memoryLimit',
             'points',
             'description',
             'inputFormat',
@@ -248,7 +247,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // Prepare data
         $title = mysqli_real_escape_string($cn, $_POST['title']);
         $timeLimit = floatval($_POST['timeLimit']);
-        $memoryLimit = intval($_POST['memoryLimit']);
         $points = intval($_POST['points']);
 
         debug_log("Generating statement HTML");
@@ -265,14 +263,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         // Modified query to include points
         debug_log("Inserting problem into database");
-        $query = "INSERT INTO problems (title, time_limit, memory_limit, points, created_at) 
-             VALUES (?, ?, ?, ?, NOW())";
+        $query = "INSERT INTO problems (title, time_limit, points, created_at) 
+             VALUES (?, ?, ?, NOW())";
         $stmt = mysqli_prepare($cn, $query);
         if (!$stmt) {
             throw new Exception("Prepare failed: " . mysqli_error($cn));
         }
 
-        mysqli_stmt_bind_param($stmt, "sdii", $title, $timeLimit, $memoryLimit, $points);
+        mysqli_stmt_bind_param($stmt, "sdi", $title, $timeLimit, $points);
 
         if (!mysqli_stmt_execute($stmt)) {
             throw new Exception("Database insert failed: " . mysqli_error($cn));
@@ -471,11 +469,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         <div class="form-group">
                             <label>Time Limit (seconds):</label>
                             <input type="number" name="timeLimit" step="0.1" required />
-                        </div>
-
-                        <div class="form-group">
-                            <label>Memory Limit (MB):</label>
-                            <input type="number" name="memoryLimit" required />
                         </div>
 
                         <div class="form-group">

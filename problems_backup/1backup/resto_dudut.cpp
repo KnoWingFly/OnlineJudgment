@@ -43,8 +43,8 @@ int solve(int W, int n)
 }
 
 int main(){
-    freopen("in","r",stdin);
-    freopen("out","w",stdout);
+    // freopen("in","r",stdin);
+    // freopen("out","w",stdout);
     scanf("%d",&c);
     for(int i = 0; i < c;i++){
 
