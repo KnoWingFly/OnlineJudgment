@@ -221,9 +221,9 @@ include('settings.php');
 	<!-- wrap starts here -->
 	<div id="wrap">
 		<!--header -->
-		<?php include('header.php'); ?>
+		<?php include('Layout/header.php'); ?>
 		<!-- menu -->
-		<?php include('menu.php'); ?>
+		<?php include('Layout/menu.php'); ?>
 		<!-- content-wrap starts here -->
 		<div id="content-wrap">
 			<div id="main">
@@ -236,7 +236,7 @@ include('settings.php');
 		</div>
 		<!--footer starts here-->
 		<div id="footer">
-			<?php include('footer.php'); ?>
+			<?php include('Layout/footer.php'); ?>
 		</div>
 	</div>
 	<!-- wrap ends here -->

@@ -154,7 +154,7 @@ include('../settings.php');
 <!-- wrap starts here -->
 <div id="wrap">
     <!--header -->
-    <?php include('../header.php'); ?>
+    <?php include('../Layout/header.php'); ?>
     
     <!-- menu -->    
     <div id="menu">
@@ -237,7 +237,7 @@ include('../settings.php');
                 
     <!--footer starts here-->
     <div id="footer">
-        <?php include('../footer.php'); ?>
+        <?php include('../Layout/footer.php'); ?>
     </div>    
 
 <!-- wrap ends here -->

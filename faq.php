@@ -52,10 +52,10 @@ $(document).ready(function(){
 <div id="wrap">
 		
 		<!--header -->
-		<?php include('header.php'); ?>
+		<?php include('Layout/header.php'); ?>
 		
 		<!-- menu -->	
-		<?php include('menu.php'); ?>
+		<?php include('Layout/menu.php'); ?>
 			
 		<!-- content-wrap starts here -->
 		<div id="content-wrap">
@@ -129,7 +129,7 @@ $(document).ready(function(){
 			</div>
 
 			<div id="sidebar">
-				<?php include('sidebar.php'); ?>
+				<?php include('Layout/sidebar.php'); ?>
 			</div>
 		
 		<!-- content-wrap ends here -->	
@@ -137,7 +137,7 @@ $(document).ready(function(){
 					
 		<!--footer starts here-->
 		<div id="footer">
-			<?php include('footer.php'); ?>
+			<?php include('Layout/footer.php'); ?>
 		</div>	
 
 <!-- wrap ends here -->
