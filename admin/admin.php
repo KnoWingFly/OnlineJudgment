@@ -224,7 +224,8 @@ include('../settings.php');
         <div id="sidebar">
             <h3>Admin Menu</h3>
             <ul class="sidemenu">
-                <li><a href="problems.php">Manage Problems</a></li>
+                <li><a href="problems.php">Add Problems</a></li>
+                <li><a href="delete-problems.php">Delete Problems</a></li>
                 <li><a href="users.php">Manage Users</a></li>
                 <li><a href="setting.php">Contest Settings</a></li>
             </ul>
