@@ -12,7 +12,7 @@
 		<li id="menu5"><a href="/faq.php">FAQ</a></li>	
 		<?php if(isset($_SESSION['isloggedin'])) print '<li id="menu6"><a href="/chat.php">Chat</a></li>'; ?>
 		<?php if(isset($_SESSION['admin'])) print '<li id="menu7"><a href="/admin/admin.php">Admin</a></li>'; ?>
-		<?php if(isset($_SESSION['isloggedin'])) print '<li id="menu8"><a href="/personal.php">Personal</a></li>'; ?>
+		<!-- <?php if(isset($_SESSION['isloggedin'])) print '<li id="menu8"><a href="/personal.php">Personal</a></li>'; ?> disable sementara -->
 		<?php if(isset($_SESSION['isloggedin'])) print '<li id="menu9"><a href="/logout.php">Logout</a></li>'; ?>
 			
 	</ul>
