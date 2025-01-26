@@ -1,324 +1,54 @@
-2025-01-15 18:44:02,338 - DEBUG - Judge script started
-2025-01-15 18:44:02,339 - DEBUG - Processing submission: ./TestJawaban/jawaban1.go for problem 1
-2025-01-15 18:44:02,355 - DEBUG - Starting compilation of ./TestJawaban/jawaban1.go
-2025-01-15 18:44:02,355 - DEBUG - Running compilation command: go build -o /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/TestJawaban/a.out /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/TestJawaban/jawaban1.go
-2025-01-15 18:44:02,356 - DEBUG - Working directory: /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/TestJawaban
-2025-01-15 18:44:03,424 - DEBUG - Compilation successful, output at: /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/TestJawaban/a.out
-2025-01-15 18:44:03,424 - DEBUG - Starting solution execution with executable: /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/TestJawaban/a.out
-2025-01-15 18:44:03,720 - DEBUG - Execution completed in 0.295 seconds
-2025-01-15 18:44:03,720 - DEBUG - Comparing output files
-2025-01-15 18:44:03,730 - DEBUG - Number of lines in output: 20
-2025-01-15 18:44:03,731 - DEBUG - Number of lines in expected: 20
-2025-01-15 18:44:03,731 - DEBUG - Processed output:
-2025-01-15 18:44:03,731 - DEBUG - Output line 1: 'Case #1 : 825'
-2025-01-15 18:44:03,732 - DEBUG - Output line 2: 'Case #2 : 515'
-2025-01-15 18:44:03,732 - DEBUG - Output line 3: 'Case #3 : 646'
-2025-01-15 18:44:03,733 - DEBUG - Output line 4: 'Case #4 : 1651'
-2025-01-15 18:44:03,733 - DEBUG - Output line 5: 'Case #5 : 1229'
-2025-01-15 18:44:03,733 - DEBUG - Output line 6: 'Case #6 : 1039'
-2025-01-15 18:44:03,734 - DEBUG - Output line 7: 'Case #7 : 643'
-2025-01-15 18:44:03,734 - DEBUG - Output line 8: 'Case #8 : 1557'
-2025-01-15 18:44:03,734 - DEBUG - Output line 9: 'Case #9 : 491'
-2025-01-15 18:44:03,735 - DEBUG - Output line 10: 'Case #10 : 1356'
-2025-01-15 18:44:03,735 - DEBUG - Output line 11: 'Case #11 : 1548'
-2025-01-15 18:44:03,736 - DEBUG - Output line 12: 'Case #12 : 1051'
-2025-01-15 18:44:03,736 - DEBUG - Output line 13: 'Case #13 : 1925'
-2025-01-15 18:44:03,736 - DEBUG - Output line 14: 'Case #14 : 2491'
-2025-01-15 18:44:03,737 - DEBUG - Output line 15: 'Case #15 : 1208'
-2025-01-15 18:44:03,737 - DEBUG - Output line 16: 'Case #16 : 555'
-2025-01-15 18:44:03,738 - DEBUG - Output line 17: 'Case #17 : 1631'
-2025-01-15 18:44:03,738 - DEBUG - Output line 18: 'Case #18 : 505'
-2025-01-15 18:44:03,739 - DEBUG - Output line 19: 'Case #19 : 333'
-2025-01-15 18:44:03,739 - DEBUG - Output line 20: 'Case #20 : 2371'
-2025-01-15 18:44:03,740 - DEBUG - Expected output:
-2025-01-15 18:44:03,740 - DEBUG - Expected line 1: 'Case #1 : 825'
-2025-01-15 18:44:03,741 - DEBUG - Expected line 2: 'Case #2 : 515'
-2025-01-15 18:44:03,741 - DEBUG - Expected line 3: 'Case #3 : 646'
-2025-01-15 18:44:03,742 - DEBUG - Expected line 4: 'Case #4 : 1651'
-2025-01-15 18:44:03,743 - DEBUG - Expected line 5: 'Case #5 : 1229'
-2025-01-15 18:44:03,743 - DEBUG - Expected line 6: 'Case #6 : 1039'
-2025-01-15 18:44:03,744 - DEBUG - Expected line 7: 'Case #7 : 643'
-2025-01-15 18:44:03,744 - DEBUG - Expected line 8: 'Case #8 : 1557'
-2025-01-15 18:44:03,745 - DEBUG - Expected line 9: 'Case #9 : 491'
-2025-01-15 18:44:03,745 - DEBUG - Expected line 10: 'Case #10 : 1356'
-2025-01-15 18:44:03,746 - DEBUG - Expected line 11: 'Case #11 : 1548'
-2025-01-15 18:44:03,746 - DEBUG - Expected line 12: 'Case #12 : 1051'
-2025-01-15 18:44:03,747 - DEBUG - Expected line 13: 'Case #13 : 1925'
-2025-01-15 18:44:03,747 - DEBUG - Expected line 14: 'Case #14 : 2491'
-2025-01-15 18:44:03,748 - DEBUG - Expected line 15: 'Case #15 : 1208'
-2025-01-15 18:44:03,748 - DEBUG - Expected line 16: 'Case #16 : 555'
-2025-01-15 18:44:03,748 - DEBUG - Expected line 17: 'Case #17 : 1631'
-2025-01-15 18:44:03,749 - DEBUG - Expected line 18: 'Case #18 : 505'
-2025-01-15 18:44:03,749 - DEBUG - Expected line 19: 'Case #19 : 333'
-2025-01-15 18:44:03,750 - DEBUG - Expected line 20: 'Case #20 : 2371'
-2025-01-15 18:44:03,750 - DEBUG - Output matches expected result!
-2025-01-15 18:59:18,081 - DEBUG - Judge script started
-2025-01-15 18:59:18,082 - DEBUG - Processing submission: /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/test123/1/jawaban1_2025-01-15_12-59-15.cpp for problem 1
-2025-01-15 18:59:18,092 - DEBUG - Starting compilation of /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/test123/1/jawaban1_2025-01-15_12-59-15.cpp
-2025-01-15 18:59:18,093 - DEBUG - Running compilation command: g++ -Wall -O2 -std=c++17 /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/test123/1/jawaban1_2025-01-15_12-59-15.cpp -o /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/test123/1/a.out
-2025-01-15 18:59:18,093 - DEBUG - Working directory: /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/test123/1
-2025-01-15 18:59:18,500 - DEBUG - Compilation successful, output at: /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/test123/1/a.out
-2025-01-15 18:59:18,501 - DEBUG - Starting solution execution with executable: /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/test123/1/a.out
-2025-01-15 18:59:20,412 - DEBUG - Execution completed in 1.909 seconds
-2025-01-15 18:59:20,419 - DEBUG - Comparing output files
-2025-01-15 18:59:20,438 - DEBUG - Number of lines in output: 20
-2025-01-15 18:59:20,439 - DEBUG - Number of lines in expected: 20
-2025-01-15 18:59:20,440 - DEBUG - Processed output:
-2025-01-15 18:59:20,440 - DEBUG - Output line 1: 'Case #1 : 825'
-2025-01-15 18:59:20,441 - DEBUG - Output line 2: 'Case #2 : 515'
-2025-01-15 18:59:20,441 - DEBUG - Output line 3: 'Case #3 : 646'
-2025-01-15 18:59:20,442 - DEBUG - Output line 4: 'Case #4 : 1651'
-2025-01-15 18:59:20,442 - DEBUG - Output line 5: 'Case #5 : 1229'
-2025-01-15 18:59:20,443 - DEBUG - Output line 6: 'Case #6 : 1039'
-2025-01-15 18:59:20,443 - DEBUG - Output line 7: 'Case #7 : 643'
-2025-01-15 18:59:20,443 - DEBUG - Output line 8: 'Case #8 : 1557'
-2025-01-15 18:59:20,444 - DEBUG - Output line 9: 'Case #9 : 491'
-2025-01-15 18:59:20,444 - DEBUG - Output line 10: 'Case #10 : 1356'
-2025-01-15 18:59:20,444 - DEBUG - Output line 11: 'Case #11 : 1548'
-2025-01-15 18:59:20,445 - DEBUG - Output line 12: 'Case #12 : 1051'
-2025-01-15 18:59:20,445 - DEBUG - Output line 13: 'Case #13 : 1925'
-2025-01-15 18:59:20,445 - DEBUG - Output line 14: 'Case #14 : 2491'
-2025-01-15 18:59:20,446 - DEBUG - Output line 15: 'Case #15 : 1208'
-2025-01-15 18:59:20,446 - DEBUG - Output line 16: 'Case #16 : 555'
-2025-01-15 18:59:20,447 - DEBUG - Output line 17: 'Case #17 : 1631'
-2025-01-15 18:59:20,447 - DEBUG - Output line 18: 'Case #18 : 505'
-2025-01-15 18:59:20,448 - DEBUG - Output line 19: 'Case #19 : 333'
-2025-01-15 18:59:20,449 - DEBUG - Output line 20: 'Case #20 : 2371'
-2025-01-15 18:59:20,449 - DEBUG - Expected output:
-2025-01-15 18:59:20,450 - DEBUG - Expected line 1: 'Case #1 : 825'
-2025-01-15 18:59:20,450 - DEBUG - Expected line 2: 'Case #2 : 515'
-2025-01-15 18:59:20,451 - DEBUG - Expected line 3: 'Case #3 : 646'
-2025-01-15 18:59:20,451 - DEBUG - Expected line 4: 'Case #4 : 1651'
-2025-01-15 18:59:20,451 - DEBUG - Expected line 5: 'Case #5 : 1229'
-2025-01-15 18:59:20,452 - DEBUG - Expected line 6: 'Case #6 : 1039'
-2025-01-15 18:59:20,452 - DEBUG - Expected line 7: 'Case #7 : 643'
-2025-01-15 18:59:20,453 - DEBUG - Expected line 8: 'Case #8 : 1557'
-2025-01-15 18:59:20,453 - DEBUG - Expected line 9: 'Case #9 : 491'
-2025-01-15 18:59:20,454 - DEBUG - Expected line 10: 'Case #10 : 1356'
-2025-01-15 18:59:20,454 - DEBUG - Expected line 11: 'Case #11 : 1548'
-2025-01-15 18:59:20,455 - DEBUG - Expected line 12: 'Case #12 : 1051'
-2025-01-15 18:59:20,456 - DEBUG - Expected line 13: 'Case #13 : 1925'
-2025-01-15 18:59:20,456 - DEBUG - Expected line 14: 'Case #14 : 2491'
-2025-01-15 18:59:20,456 - DEBUG - Expected line 15: 'Case #15 : 1208'
-2025-01-15 18:59:20,457 - DEBUG - Expected line 16: 'Case #16 : 555'
-2025-01-15 18:59:20,457 - DEBUG - Expected line 17: 'Case #17 : 1631'
-2025-01-15 18:59:20,458 - DEBUG - Expected line 18: 'Case #18 : 505'
-2025-01-15 18:59:20,458 - DEBUG - Expected line 19: 'Case #19 : 333'
-2025-01-15 18:59:20,459 - DEBUG - Expected line 20: 'Case #20 : 2371'
-2025-01-15 18:59:20,459 - DEBUG - Output matches expected result!
-2025-01-15 19:02:10,810 - DEBUG - Judge script started
-2025-01-15 19:02:10,811 - DEBUG - Processing submission: /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/test123/1/jawaban1_2025-01-15_13-02-08.cpp for problem 1
-2025-01-15 19:02:10,821 - DEBUG - Starting compilation of /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/test123/1/jawaban1_2025-01-15_13-02-08.cpp
-2025-01-15 19:02:10,822 - DEBUG - Running compilation command: g++ -Wall -O2 -std=c++17 /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/test123/1/jawaban1_2025-01-15_13-02-08.cpp -o /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/test123/1/a.out
-2025-01-15 19:02:10,822 - DEBUG - Working directory: /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/test123/1
-2025-01-15 19:02:11,251 - DEBUG - Compilation successful, output at: /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/test123/1/a.out
-2025-01-15 19:02:11,252 - DEBUG - Starting solution execution with executable: /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/test123/1/a.out
-2025-01-15 19:02:12,309 - DEBUG - Execution completed in 1.057 seconds
-2025-01-15 19:02:12,310 - DEBUG - Comparing output files
-2025-01-15 19:02:12,324 - DEBUG - Number of lines in output: 20
-2025-01-15 19:02:12,325 - DEBUG - Number of lines in expected: 20
-2025-01-15 19:02:12,325 - DEBUG - Processed output:
-2025-01-15 19:02:12,326 - DEBUG - Output line 1: 'Case #1 : 825'
-2025-01-15 19:02:12,326 - DEBUG - Output line 2: 'Case #2 : 515'
-2025-01-15 19:02:12,327 - DEBUG - Output line 3: 'Case #3 : 646'
-2025-01-15 19:02:12,327 - DEBUG - Output line 4: 'Case #4 : 1651'
-2025-01-15 19:02:12,328 - DEBUG - Output line 5: 'Case #5 : 1229'
-2025-01-15 19:02:12,328 - DEBUG - Output line 6: 'Case #6 : 1039'
-2025-01-15 19:02:12,329 - DEBUG - Output line 7: 'Case #7 : 643'
-2025-01-15 19:02:12,329 - DEBUG - Output line 8: 'Case #8 : 1557'
-2025-01-15 19:02:12,330 - DEBUG - Output line 9: 'Case #9 : 491'
-2025-01-15 19:02:12,330 - DEBUG - Output line 10: 'Case #10 : 1356'
-2025-01-15 19:02:12,331 - DEBUG - Output line 11: 'Case #11 : 1548'
-2025-01-15 19:02:12,331 - DEBUG - Output line 12: 'Case #12 : 1051'
-2025-01-15 19:02:12,332 - DEBUG - Output line 13: 'Case #13 : 1925'
-2025-01-15 19:02:12,332 - DEBUG - Output line 14: 'Case #14 : 2491'
-2025-01-15 19:02:12,333 - DEBUG - Output line 15: 'Case #15 : 1208'
-2025-01-15 19:02:12,333 - DEBUG - Output line 16: 'Case #16 : 555'
-2025-01-15 19:02:12,334 - DEBUG - Output line 17: 'Case #17 : 1631'
-2025-01-15 19:02:12,334 - DEBUG - Output line 18: 'Case #18 : 505'
-2025-01-15 19:02:12,335 - DEBUG - Output line 19: 'Case #19 : 333'
-2025-01-15 19:02:12,335 - DEBUG - Output line 20: 'Case #20 : 2371'
-2025-01-15 19:02:12,336 - DEBUG - Expected output:
-2025-01-15 19:02:12,336 - DEBUG - Expected line 1: 'Case #1 : 825'
-2025-01-15 19:02:12,337 - DEBUG - Expected line 2: 'Case #2 : 515'
-2025-01-15 19:02:12,337 - DEBUG - Expected line 3: 'Case #3 : 646'
-2025-01-15 19:02:12,338 - DEBUG - Expected line 4: 'Case #4 : 1651'
-2025-01-15 19:02:12,338 - DEBUG - Expected line 5: 'Case #5 : 1229'
-2025-01-15 19:02:12,339 - DEBUG - Expected line 6: 'Case #6 : 1039'
-2025-01-15 19:02:12,339 - DEBUG - Expected line 7: 'Case #7 : 643'
-2025-01-15 19:02:12,340 - DEBUG - Expected line 8: 'Case #8 : 1557'
-2025-01-15 19:02:12,340 - DEBUG - Expected line 9: 'Case #9 : 491'
-2025-01-15 19:02:12,341 - DEBUG - Expected line 10: 'Case #10 : 1356'
-2025-01-15 19:02:12,341 - DEBUG - Expected line 11: 'Case #11 : 1548'
-2025-01-15 19:02:12,342 - DEBUG - Expected line 12: 'Case #12 : 1051'
-2025-01-15 19:02:12,342 - DEBUG - Expected line 13: 'Case #13 : 1925'
-2025-01-15 19:02:12,343 - DEBUG - Expected line 14: 'Case #14 : 2491'
-2025-01-15 19:02:12,343 - DEBUG - Expected line 15: 'Case #15 : 1208'
-2025-01-15 19:02:12,344 - DEBUG - Expected line 16: 'Case #16 : 555'
-2025-01-15 19:02:12,344 - DEBUG - Expected line 17: 'Case #17 : 1631'
-2025-01-15 19:02:12,345 - DEBUG - Expected line 18: 'Case #18 : 505'
-2025-01-15 19:02:12,345 - DEBUG - Expected line 19: 'Case #19 : 333'
-2025-01-15 19:02:12,346 - DEBUG - Expected line 20: 'Case #20 : 2371'
-2025-01-15 19:02:12,346 - DEBUG - Output matches expected result!
-2025-01-15 22:50:45,207 - DEBUG - Judge script started
-2025-01-15 22:50:45,208 - DEBUG - Processing submission: /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/admin/1/jawaban1_2025-01-15_16-50-42.go for problem 1
-2025-01-15 22:50:45,218 - DEBUG - Starting compilation of /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/admin/1/jawaban1_2025-01-15_16-50-42.go
-2025-01-15 22:50:45,218 - DEBUG - Running compilation command: go build -o /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/admin/1/a.out /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/admin/1/jawaban1_2025-01-15_16-50-42.go
-2025-01-15 22:50:45,219 - DEBUG - Working directory: /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/admin/1
-2025-01-15 22:50:46,061 - DEBUG - Compilation successful, output at: /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/admin/1/a.out
-2025-01-15 22:50:46,062 - DEBUG - Starting solution execution with executable: /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/admin/1/a.out
-2025-01-15 22:50:46,384 - DEBUG - Execution completed in 0.321 seconds
-2025-01-15 22:50:46,384 - DEBUG - Comparing output files
-2025-01-15 22:50:46,401 - DEBUG - Number of lines in output: 20
-2025-01-15 22:50:46,402 - DEBUG - Number of lines in expected: 20
-2025-01-15 22:50:46,402 - DEBUG - Processed output:
-2025-01-15 22:50:46,402 - DEBUG - Output line 1: 'Case #1 : 825'
-2025-01-15 22:50:46,403 - DEBUG - Output line 2: 'Case #2 : 515'
-2025-01-15 22:50:46,403 - DEBUG - Output line 3: 'Case #3 : 646'
-2025-01-15 22:50:46,404 - DEBUG - Output line 4: 'Case #4 : 1651'
-2025-01-15 22:50:46,404 - DEBUG - Output line 5: 'Case #5 : 1229'
-2025-01-15 22:50:46,405 - DEBUG - Output line 6: 'Case #6 : 1039'
-2025-01-15 22:50:46,405 - DEBUG - Output line 7: 'Case #7 : 643'
-2025-01-15 22:50:46,406 - DEBUG - Output line 8: 'Case #8 : 1557'
-2025-01-15 22:50:46,406 - DEBUG - Output line 9: 'Case #9 : 491'
-2025-01-15 22:50:46,407 - DEBUG - Output line 10: 'Case #10 : 1356'
-2025-01-15 22:50:46,407 - DEBUG - Output line 11: 'Case #11 : 1548'
-2025-01-15 22:50:46,408 - DEBUG - Output line 12: 'Case #12 : 1051'
-2025-01-15 22:50:46,408 - DEBUG - Output line 13: 'Case #13 : 1925'
-2025-01-15 22:50:46,408 - DEBUG - Output line 14: 'Case #14 : 2491'
-2025-01-15 22:50:46,409 - DEBUG - Output line 15: 'Case #15 : 1208'
-2025-01-15 22:50:46,409 - DEBUG - Output line 16: 'Case #16 : 555'
-2025-01-15 22:50:46,410 - DEBUG - Output line 17: 'Case #17 : 1631'
-2025-01-15 22:50:46,410 - DEBUG - Output line 18: 'Case #18 : 505'
-2025-01-15 22:50:46,411 - DEBUG - Output line 19: 'Case #19 : 333'
-2025-01-15 22:50:46,411 - DEBUG - Output line 20: 'Case #20 : 2371'
-2025-01-15 22:50:46,411 - DEBUG - Expected output:
-2025-01-15 22:50:46,412 - DEBUG - Expected line 1: 'Case #1 : 825'
-2025-01-15 22:50:46,412 - DEBUG - Expected line 2: 'Case #2 : 515'
-2025-01-15 22:50:46,413 - DEBUG - Expected line 3: 'Case #3 : 646'
-2025-01-15 22:50:46,413 - DEBUG - Expected line 4: 'Case #4 : 1651'
-2025-01-15 22:50:46,414 - DEBUG - Expected line 5: 'Case #5 : 1229'
-2025-01-15 22:50:46,414 - DEBUG - Expected line 6: 'Case #6 : 1039'
-2025-01-15 22:50:46,415 - DEBUG - Expected line 7: 'Case #7 : 643'
-2025-01-15 22:50:46,415 - DEBUG - Expected line 8: 'Case #8 : 1557'
-2025-01-15 22:50:46,416 - DEBUG - Expected line 9: 'Case #9 : 491'
-2025-01-15 22:50:46,416 - DEBUG - Expected line 10: 'Case #10 : 1356'
-2025-01-15 22:50:46,416 - DEBUG - Expected line 11: 'Case #11 : 1548'
-2025-01-15 22:50:46,417 - DEBUG - Expected line 12: 'Case #12 : 1051'
-2025-01-15 22:50:46,417 - DEBUG - Expected line 13: 'Case #13 : 1925'
-2025-01-15 22:50:46,418 - DEBUG - Expected line 14: 'Case #14 : 2491'
-2025-01-15 22:50:46,418 - DEBUG - Expected line 15: 'Case #15 : 1208'
-2025-01-15 22:50:46,419 - DEBUG - Expected line 16: 'Case #16 : 555'
-2025-01-15 22:50:46,419 - DEBUG - Expected line 17: 'Case #17 : 1631'
-2025-01-15 22:50:46,419 - DEBUG - Expected line 18: 'Case #18 : 505'
-2025-01-15 22:50:46,420 - DEBUG - Expected line 19: 'Case #19 : 333'
-2025-01-15 22:50:46,420 - DEBUG - Expected line 20: 'Case #20 : 2371'
-2025-01-15 22:50:46,421 - DEBUG - Output matches expected result!
-2025-01-15 22:51:34,810 - DEBUG - Judge script started
-2025-01-15 22:51:34,810 - DEBUG - Processing submission: /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/KnowingFly/1/jawaban1.java for problem 1
-2025-01-15 22:51:34,819 - DEBUG - Starting compilation of /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/KnowingFly/1/jawaban1.java
-2025-01-15 22:51:34,819 - DEBUG - Running compilation command: javac /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/KnowingFly/1/jawaban1.java
-2025-01-15 22:51:34,819 - DEBUG - Working directory: /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/KnowingFly/1
-2025-01-15 22:51:36,339 - DEBUG - Compilation successful, output at: /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/KnowingFly/1/jawaban1.class
-2025-01-15 22:51:36,340 - DEBUG - Starting solution execution with executable: /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/KnowingFly/1/jawaban1.class
-2025-01-15 22:51:39,403 - DEBUG - Execution completed in 3.060 seconds
-2025-01-15 22:51:39,410 - DEBUG - Comparing output files
-2025-01-15 22:51:39,427 - DEBUG - Number of lines in output: 20
-2025-01-15 22:51:39,427 - DEBUG - Number of lines in expected: 20
-2025-01-15 22:51:39,428 - DEBUG - Processed output:
-2025-01-15 22:51:39,428 - DEBUG - Output line 1: 'Case #1 : 825'
-2025-01-15 22:51:39,428 - DEBUG - Output line 2: 'Case #2 : 515'
-2025-01-15 22:51:39,429 - DEBUG - Output line 3: 'Case #3 : 646'
-2025-01-15 22:51:39,429 - DEBUG - Output line 4: 'Case #4 : 1651'
-2025-01-15 22:51:39,429 - DEBUG - Output line 5: 'Case #5 : 1229'
-2025-01-15 22:51:39,430 - DEBUG - Output line 6: 'Case #6 : 1039'
-2025-01-15 22:51:39,430 - DEBUG - Output line 7: 'Case #7 : 643'
-2025-01-15 22:51:39,430 - DEBUG - Output line 8: 'Case #8 : 1557'
-2025-01-15 22:51:39,431 - DEBUG - Output line 9: 'Case #9 : 491'
-2025-01-15 22:51:39,431 - DEBUG - Output line 10: 'Case #10 : 1356'
-2025-01-15 22:51:39,431 - DEBUG - Output line 11: 'Case #11 : 1548'
-2025-01-15 22:51:39,432 - DEBUG - Output line 12: 'Case #12 : 1051'
-2025-01-15 22:51:39,432 - DEBUG - Output line 13: 'Case #13 : 1925'
-2025-01-15 22:51:39,432 - DEBUG - Output line 14: 'Case #14 : 2491'
-2025-01-15 22:51:39,433 - DEBUG - Output line 15: 'Case #15 : 1208'
-2025-01-15 22:51:39,433 - DEBUG - Output line 16: 'Case #16 : 555'
-2025-01-15 22:51:39,433 - DEBUG - Output line 17: 'Case #17 : 1631'
-2025-01-15 22:51:39,434 - DEBUG - Output line 18: 'Case #18 : 505'
-2025-01-15 22:51:39,434 - DEBUG - Output line 19: 'Case #19 : 333'
-2025-01-15 22:51:39,434 - DEBUG - Output line 20: 'Case #20 : 2371'
-2025-01-15 22:51:39,434 - DEBUG - Expected output:
-2025-01-15 22:51:39,435 - DEBUG - Expected line 1: 'Case #1 : 825'
-2025-01-15 22:51:39,435 - DEBUG - Expected line 2: 'Case #2 : 515'
-2025-01-15 22:51:39,435 - DEBUG - Expected line 3: 'Case #3 : 646'
-2025-01-15 22:51:39,436 - DEBUG - Expected line 4: 'Case #4 : 1651'
-2025-01-15 22:51:39,436 - DEBUG - Expected line 5: 'Case #5 : 1229'
-2025-01-15 22:51:39,436 - DEBUG - Expected line 6: 'Case #6 : 1039'
-2025-01-15 22:51:39,437 - DEBUG - Expected line 7: 'Case #7 : 643'
-2025-01-15 22:51:39,437 - DEBUG - Expected line 8: 'Case #8 : 1557'
-2025-01-15 22:51:39,437 - DEBUG - Expected line 9: 'Case #9 : 491'
-2025-01-15 22:51:39,438 - DEBUG - Expected line 10: 'Case #10 : 1356'
-2025-01-15 22:51:39,438 - DEBUG - Expected line 11: 'Case #11 : 1548'
-2025-01-15 22:51:39,439 - DEBUG - Expected line 12: 'Case #12 : 1051'
-2025-01-15 22:51:39,439 - DEBUG - Expected line 13: 'Case #13 : 1925'
-2025-01-15 22:51:39,439 - DEBUG - Expected line 14: 'Case #14 : 2491'
-2025-01-15 22:51:39,440 - DEBUG - Expected line 15: 'Case #15 : 1208'
-2025-01-15 22:51:39,440 - DEBUG - Expected line 16: 'Case #16 : 555'
-2025-01-15 22:51:39,440 - DEBUG - Expected line 17: 'Case #17 : 1631'
-2025-01-15 22:51:39,441 - DEBUG - Expected line 18: 'Case #18 : 505'
-2025-01-15 22:51:39,441 - DEBUG - Expected line 19: 'Case #19 : 333'
-2025-01-15 22:51:39,442 - DEBUG - Expected line 20: 'Case #20 : 2371'
-2025-01-15 22:51:39,442 - DEBUG - Output matches expected result!
-2025-01-17 19:56:45,631 - DEBUG - Judge script started
-2025-01-17 19:56:45,632 - DEBUG - Processing submission: /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/admin/1/addsum.pertanyaan_2025-01-17_13-56-45.cpp for problem 1
-2025-01-17 19:56:45,637 - DEBUG - Starting compilation of /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/admin/1/addsum.pertanyaan_2025-01-17_13-56-45.cpp
-2025-01-17 19:56:45,638 - DEBUG - Running compilation command: g++ -Wall -O2 -std=c++17 /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/admin/1/addsum.pertanyaan_2025-01-17_13-56-45.cpp -o /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/admin/1/a.out
-2025-01-17 19:56:45,638 - DEBUG - Working directory: /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/admin/1
-2025-01-17 19:56:46,146 - DEBUG - Compilation successful, output at: /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/admin/1/a.out
-2025-01-17 19:56:46,147 - DEBUG - Starting solution execution with executable: /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/admin/1/a.out
-2025-01-17 19:56:46,162 - DEBUG - Execution completed in 0.015 seconds
-2025-01-17 19:56:46,163 - DEBUG - Comparing output files
-2025-01-17 19:56:46,171 - DEBUG - Number of lines in output: 20
-2025-01-17 19:56:46,171 - DEBUG - Number of lines in expected: 20
-2025-01-17 19:56:46,171 - DEBUG - Processed output:
-2025-01-17 19:56:46,171 - DEBUG - Output line 1: 'Case #1: 1 21'
-2025-01-17 19:56:46,172 - DEBUG - Output line 2: 'Case #2: No solution'
-2025-01-17 19:56:46,172 - DEBUG - Output line 3: 'Case #3: 22 63'
-2025-01-17 19:56:46,173 - DEBUG - Output line 4: 'Case #4: 5 10'
-2025-01-17 19:56:46,173 - DEBUG - Output line 5: 'Case #5: 4 30'
-2025-01-17 19:56:46,173 - DEBUG - Output line 6: 'Case #6: No solution'
-2025-01-17 19:56:46,174 - DEBUG - Output line 7: 'Case #7: No solution'
-2025-01-17 19:56:46,174 - DEBUG - Output line 8: 'Case #8: 6 45'
-2025-01-17 19:56:46,174 - DEBUG - Output line 9: 'Case #9: 0 87'
-2025-01-17 19:56:46,174 - DEBUG - Output line 10: 'Case #10: 1 69'
-2025-01-17 19:56:46,175 - DEBUG - Output line 11: 'Case #11: 16 49'
-2025-01-17 19:56:46,175 - DEBUG - Output line 12: 'Case #12: No solution'
-2025-01-17 19:56:46,175 - DEBUG - Output line 13: 'Case #13: 5 14'
-2025-01-17 19:56:46,175 - DEBUG - Output line 14: 'Case #14: 8 9'
-2025-01-17 19:56:46,175 - DEBUG - Output line 15: 'Case #15: 19 28'
-2025-01-17 19:56:46,176 - DEBUG - Output line 16: 'Case #16: 1 68'
-2025-01-17 19:56:46,176 - DEBUG - Output line 17: 'Case #17: 2 66'
-2025-01-17 19:56:46,176 - DEBUG - Output line 18: 'Case #18: 2 4'
-2025-01-17 19:56:46,176 - DEBUG - Output line 19: 'Case #19: 4 21'
-2025-01-17 19:56:46,177 - DEBUG - Output line 20: 'Case #20: 16 48'
-2025-01-17 19:56:46,177 - DEBUG - Expected output:
-2025-01-17 19:56:46,177 - DEBUG - Expected line 1: 'Case #1: 1 21'
-2025-01-17 19:56:46,178 - DEBUG - Expected line 2: 'Case #2: No solution'
-2025-01-17 19:56:46,178 - DEBUG - Expected line 3: 'Case #3: 22 63'
-2025-01-17 19:56:46,178 - DEBUG - Expected line 4: 'Case #4: 5 10'
-2025-01-17 19:56:46,178 - DEBUG - Expected line 5: 'Case #5: 4 30'
-2025-01-17 19:56:46,179 - DEBUG - Expected line 6: 'Case #6: No solution'
-2025-01-17 19:56:46,179 - DEBUG - Expected line 7: 'Case #7: No solution'
-2025-01-17 19:56:46,179 - DEBUG - Expected line 8: 'Case #8: 6 45'
-2025-01-17 19:56:46,179 - DEBUG - Expected line 9: 'Case #9: 0 87'
-2025-01-17 19:56:46,179 - DEBUG - Expected line 10: 'Case #10: 1 69'
-2025-01-17 19:56:46,180 - DEBUG - Expected line 11: 'Case #11: 16 49'
-2025-01-17 19:56:46,180 - DEBUG - Expected line 12: 'Case #12: No solution'
-2025-01-17 19:56:46,180 - DEBUG - Expected line 13: 'Case #13: 5 14'
-2025-01-17 19:56:46,180 - DEBUG - Expected line 14: 'Case #14: 8 9'
-2025-01-17 19:56:46,180 - DEBUG - Expected line 15: 'Case #15: 19 28'
-2025-01-17 19:56:46,181 - DEBUG - Expected line 16: 'Case #16: 1 68'
-2025-01-17 19:56:46,181 - DEBUG - Expected line 17: 'Case #17: 2 66'
-2025-01-17 19:56:46,181 - DEBUG - Expected line 18: 'Case #18: 2 4'
-2025-01-17 19:56:46,182 - DEBUG - Expected line 19: 'Case #19: 4 21'
-2025-01-17 19:56:46,182 - DEBUG - Expected line 20: 'Case #20: 16 48'
-2025-01-17 19:56:46,182 - DEBUG - Output matches expected result!
+2025-01-24 21:58:06,055 - DEBUG - Judge script started
+2025-01-24 21:58:06,056 - DEBUG - Processing submission: /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/admin/1/resto_dudut_2025-01-24_15-58-04.cpp for problem 1
+2025-01-24 21:58:06,068 - DEBUG - Starting compilation of /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/admin/1/resto_dudut_2025-01-24_15-58-04.cpp
+2025-01-24 21:58:06,068 - DEBUG - Running compilation command: g++ -Wall -O2 -std=c++17 /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/admin/1/resto_dudut_2025-01-24_15-58-04.cpp -o /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/admin/1/a.out
+2025-01-24 21:58:06,069 - DEBUG - Working directory: /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/admin/1
+2025-01-24 21:58:06,772 - DEBUG - Compilation successful, output at: /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/admin/1/a.out
+2025-01-24 21:58:06,773 - DEBUG - Starting solution execution with executable: /mnt/c/Users/Fernando/Desktop/UMNPC/test website/newOJ/code/admin/1/a.out
+2025-01-24 21:58:08,803 - DEBUG - Execution completed in 2.027 seconds
+2025-01-24 21:58:08,810 - DEBUG - Comparing output files
+2025-01-24 21:58:08,828 - DEBUG - Number of lines in output: 20
+2025-01-24 21:58:08,829 - DEBUG - Number of lines in expected: 20
+2025-01-24 21:58:08,830 - DEBUG - Processed output:
+2025-01-24 21:58:08,830 - DEBUG - Output line 1: 'Case #1 : 613'
+2025-01-24 21:58:08,831 - DEBUG - Output line 2: 'Case #2 : 604'
+2025-01-24 21:58:08,831 - DEBUG - Output line 3: 'Case #3 : 895'
+2025-01-24 21:58:08,832 - DEBUG - Output line 4: 'Case #4 : 353'
+2025-01-24 21:58:08,832 - DEBUG - Output line 5: 'Case #5 : 323'
+2025-01-24 21:58:08,833 - DEBUG - Output line 6: 'Case #6 : 2233'
+2025-01-24 21:58:08,833 - DEBUG - Output line 7: 'Case #7 : 1781'
+2025-01-24 21:58:08,834 - DEBUG - Output line 8: 'Case #8 : 1785'
+2025-01-24 21:58:08,834 - DEBUG - Output line 9: 'Case #9 : 2087'
+2025-01-24 21:58:08,834 - DEBUG - Output line 10: 'Case #10 : 738'
+2025-01-24 21:58:08,835 - DEBUG - Output line 11: 'Case #11 : 1287'
+2025-01-24 21:58:08,835 - DEBUG - Output line 12: 'Case #12 : 2139'
+2025-01-24 21:58:08,836 - DEBUG - Output line 13: 'Case #13 : 1040'
+2025-01-24 21:58:08,836 - DEBUG - Output line 14: 'Case #14 : 1877'
+2025-01-24 21:58:08,837 - DEBUG - Output line 15: 'Case #15 : 892'
+2025-01-24 21:58:08,837 - DEBUG - Output line 16: 'Case #16 : 569'
+2025-01-24 21:58:08,838 - DEBUG - Output line 17: 'Case #17 : 576'
+2025-01-24 21:58:08,838 - DEBUG - Output line 18: 'Case #18 : 3171'
+2025-01-24 21:58:08,838 - DEBUG - Output line 19: 'Case #19 : 2102'
+2025-01-24 21:58:08,839 - DEBUG - Output line 20: 'Case #20 : 1431'
+2025-01-24 21:58:08,839 - DEBUG - Expected output:
+2025-01-24 21:58:08,840 - DEBUG - Expected line 1: 'Case #1 : 613'
+2025-01-24 21:58:08,840 - DEBUG - Expected line 2: 'Case #2 : 604'
+2025-01-24 21:58:08,841 - DEBUG - Expected line 3: 'Case #3 : 895'
+2025-01-24 21:58:08,841 - DEBUG - Expected line 4: 'Case #4 : 353'
+2025-01-24 21:58:08,842 - DEBUG - Expected line 5: 'Case #5 : 323'
+2025-01-24 21:58:08,842 - DEBUG - Expected line 6: 'Case #6 : 2233'
+2025-01-24 21:58:08,843 - DEBUG - Expected line 7: 'Case #7 : 1781'
+2025-01-24 21:58:08,843 - DEBUG - Expected line 8: 'Case #8 : 1785'
+2025-01-24 21:58:08,844 - DEBUG - Expected line 9: 'Case #9 : 2087'
+2025-01-24 21:58:08,844 - DEBUG - Expected line 10: 'Case #10 : 738'
+2025-01-24 21:58:08,845 - DEBUG - Expected line 11: 'Case #11 : 1287'
+2025-01-24 21:58:08,845 - DEBUG - Expected line 12: 'Case #12 : 2139'
+2025-01-24 21:58:08,846 - DEBUG - Expected line 13: 'Case #13 : 1040'
+2025-01-24 21:58:08,846 - DEBUG - Expected line 14: 'Case #14 : 1877'
+2025-01-24 21:58:08,847 - DEBUG - Expected line 15: 'Case #15 : 892'
+2025-01-24 21:58:08,847 - DEBUG - Expected line 16: 'Case #16 : 569'
+2025-01-24 21:58:08,848 - DEBUG - Expected line 17: 'Case #17 : 576'
+2025-01-24 21:58:08,848 - DEBUG - Expected line 18: 'Case #18 : 3171'
+2025-01-24 21:58:08,849 - DEBUG - Expected line 19: 'Case #19 : 2102'
+2025-01-24 21:58:08,849 - DEBUG - Expected line 20: 'Case #20 : 1431'
+2025-01-24 21:58:08,850 - DEBUG - Output matches expected result!

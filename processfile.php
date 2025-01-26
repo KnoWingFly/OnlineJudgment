@@ -51,14 +51,16 @@ function updateScoreAndRank($db, $userid, $problemid)
             return false; // Already solved
         }
 
-        // Calculate total solved problems and update score
+        // Calculate total solved problems and update score dynamically
         $updateScore = "
             UPDATE users u 
             SET u.score = (
-                SELECT COUNT(DISTINCT s.problemid) * 10 
-                FROM submissions s 
+                SELECT COALESCE(SUM(p.points), 0)
+                FROM submissions s
+                JOIN problems p ON s.problemid = p.id
                 WHERE s.userid = ? AND s.status = 0
-            ) + 10
+                GROUP BY s.userid
+            )
             WHERE u.id = ?";
 
         $stmt = $db->prepare($updateScore);

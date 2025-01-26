@@ -103,7 +103,6 @@ include('settings.php');
 
 		<!-- menu -->
 		<?php include('Layout/menu.php'); ?>
-
 		<!-- content-wrap starts here -->
 		<div id="content-wrap">
 

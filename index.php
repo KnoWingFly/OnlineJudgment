@@ -15,9 +15,40 @@ $userid = $_SESSION['userid'];
 
 include('settings.php');
 
+
+$host = 'localhost';     
+$dbname = 'onj';  
+$db_username = 'root';
+$db_password = ''; 
+
+try {
+    // Create a PDO connection
+    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $db_username, $db_password);
+    
+    // Set the PDO error mode to exception
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch(PDOException $e) {
+    // Handle connection error
+    die("Connection failed: " . $e->getMessage());
+}
+
 // Get problem ID with validation
 $problemid = isset($_GET['id']) ? (int)$_GET['id'] : 1;
-$problemid = ($problemid > 0 && $problemid <= count($points)) ? $problemid : 1;
+
+// Fetch total number of problems and validate problem ID
+$stmt = $pdo->query("SELECT COUNT(*) as total_problems FROM problems");
+$total_problems = $stmt->fetchColumn();
+
+$problemid = ($problemid > 0 && $problemid <= $total_problems) ? $problemid : 1;
+
+// Fetch the current problem details
+$stmt = $pdo->prepare("SELECT * FROM problems WHERE id = ?");
+$stmt->execute([$problemid]);
+$problem = $stmt->fetch(PDO::FETCH_ASSOC);
+
+// Fetch all problems for the navigation
+$stmt = $pdo->query("SELECT id, title FROM problems ORDER BY id");
+$all_problems = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <!DOCTYPE html>
@@ -104,7 +135,7 @@ $problemid = ($problemid > 0 && $problemid <= count($points)) ? $problemid : 1;
         $('#cancel').click(onCancel);
 
         var problem = $('body').attr('id'); 
-        problem = problem[3];
+        problem = problem.replace('tab', '');
 
         $.get('admin/modifyproblem.php', { problemid: problem, mode: 'get' }, function(data) {
             $('#statementpanel').html('<textarea id="statement" style="width: 100%"></textarea>');
@@ -117,7 +148,7 @@ $problemid = ($problemid > 0 && $problemid <= count($points)) ? $problemid : 1;
         $('#edit').click(onEdit);
 
         var problem = $('body').attr('id');
-        problem = problem[3];
+        problem = problem.replace('tab', '');
 
         $.get('admin/modifyproblem.php', { problemid: problem, mode: 'get' }, function(data) {
             $('#statementpanel').html('<code class="statement"></code>');
@@ -131,7 +162,7 @@ $problemid = ($problemid > 0 && $problemid <= count($points)) ? $problemid : 1;
 
         var st = $('#statement').val();
         var problem = $('body').attr('id');
-        problem = problem[3];
+        problem = problem.replace('tab', '');
 
         $.post('admin/modifyproblem.php', { problemid: problem, mode: 'put', statement: st }, function(data) {
             $('#statementpanel').html('<code class="statement"></code>');
@@ -156,15 +187,14 @@ $problemid = ($problemid > 0 && $problemid <= count($points)) ? $problemid : 1;
             if ($time < $startTime) {
                 echo '<h2>The contest has not yet begun</h2>';
             } else {
-                // Build problem tabs
+                // Build problem tabs dynamically
                 echo '<ul id="tabnav">';
-                for ($i = 1; $i <= count($points); $i++) {
-                    echo "<li class='tab$i'><a href='index.php?id=$i'>Problem $i</a></li>\n";
+                foreach ($all_problems as $prob) {
+                    echo "<li class='tab{$prob['id']}'><a href='index.php?id={$prob['id']}'>Problem {$prob['id']}</a></li>\n";
                 }
                 echo '</ul>';
 
-                $value = $points[$problemid - 1];
-                echo "<h2>Problem $problemid</h2>";
+                echo "<h2>Problem $problemid: " . htmlspecialchars($problem['title']) . "</h2>";
 
                 if ($running) {
                     include('uploadform.php');
@@ -191,7 +221,7 @@ $problemid = ($problemid > 0 && $problemid <= count($points)) ? $problemid : 1;
             if ($time >= $startTime) {
                 echo "<h3>Point Value</h3>";
                 echo "<ul class='sidemenu'>";
-                echo "<li><strong>$value</strong></li>";
+                echo "<li><strong>" . htmlspecialchars($problem['points']) . "</strong></li>";
                 echo "</ul>";
             }
             include('sidebar.php');

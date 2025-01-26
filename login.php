@@ -221,7 +221,7 @@ if(isset($_POST['register'])) {
     </div>
     
     <div id="footer">
-        <?php include('footer.php'); ?>
+        <?php include('Layout/footer.php'); ?>
     </div>
 </div>
 
