@@ -103,11 +103,15 @@ include('settings.php');
 
 		<!-- menu -->
 <<<<<<< HEAD
+<<<<<<< HEAD
 		<?php include('Layout/menu.php'); ?>
 =======
 		<?php include('layout/menu.php'); ?>
 >>>>>>> origin/master
 
+=======
+		<?php include('Layout/menu.php'); ?>
+>>>>>>> origin/master
 		<!-- content-wrap starts here -->
 		<div id="content-wrap">
 
