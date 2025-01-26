@@ -102,10 +102,8 @@ EOT;
     <font color="#0000FF"><h2>Output Format</h2></font>
     <p align="justify">{$outputFormat}</p>
 
-    <p align="justify">
-    Constraints:<br/>
-    {$constraints}
-    </p>
+    <font color="#0000FF"><h2>Constraints</h2></font>
+    <p align="justify">{$constraints}</p>
 
     <font color="#0000FF"><h2>Sample Input</h2></font>
     <pre>{$sampleInput}</pre>
