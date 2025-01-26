@@ -27,15 +27,14 @@ function handleLogin($username, $password, $DBUSER, $DBPASS, $DBNAME) {
         return array('error' => 'Database connection failed');
     }
     
-    // Query to check login and is_admin status
-    $query = "SELECT id, username, password, is_admin FROM users WHERE username = ? AND password = ?";
+    $query = "SELECT id, username, password, is_admin FROM users WHERE username = ?";
     $stmt = $mysqli->prepare($query);
     if (!$stmt) {
         $mysqli->close();
         return array('error' => 'Query preparation failed');
     }
-    
-    $stmt->bind_param("ss", $username, $password);
+
+    $stmt->bind_param("s", $username);
     $stmt->execute();
     $result = $stmt->get_result();
     $user = $result->fetch_assoc();
@@ -43,8 +42,13 @@ function handleLogin($username, $password, $DBUSER, $DBPASS, $DBNAME) {
     $stmt->close();
     $mysqli->close();
     
-    return $user;
+    if ($user && password_verify($password, $user['password'])) {
+        return $user; // Login berhasil
+    } else {
+        return null; // Login gagal
+    }
 }
+
 
 $loginError = '';
 $registrationMessage = '';
@@ -94,7 +98,7 @@ if(isset($_POST['login']) && isset($_POST['username']) && isset($_POST['password
 }
 
 // Handle Registration
-if(isset($_POST['register'])) {
+if (isset($_POST['register'])) {
     $mysqli = dbConnect($DBUSER, $DBPASS, $DBNAME);
     if (!$mysqli) {
         $registrationMessage = '<div class="error">Database connection failed</div>';
@@ -104,32 +108,46 @@ if(isset($_POST['register'])) {
         $firstname = cleanInput($_POST['firstname']);
         $lastname = cleanInput($_POST['lastname']);
         $college = cleanInput($_POST['college']);
-        
-        if(strlen($username) < 2) {
+
+        // Validasi input
+        if (empty($username) || empty($password) || empty($firstname) || empty($lastname) || empty($college)) {
+            $registrationMessage = '<div class="error">All fields are required</div>';
+        } elseif (strlen($username) < 2) {
             $registrationMessage = '<div class="error">Username must be at least 2 characters long</div>';
         } else {
-            // New users are registered with is_admin = 0
-            $query = "INSERT INTO users (username, password, firstname, lastname, college, is_admin) VALUES (?, ?, ?, ?, ?, 0)";
-            $stmt = $mysqli->prepare($query);
-            
-            if($stmt) {
-                $stmt->bind_param("sssss", $username, $password, $firstname, $lastname, $college);
-                
-                if(!$stmt->execute()) {
-                    if($mysqli->errno == 1062) {
-                        $registrationMessage = '<div class="error">Username already taken</div>';
+            // Cek apakah username sudah ada
+            $checkQuery = "SELECT id FROM users WHERE username = ?";
+            $checkStmt = $mysqli->prepare($checkQuery);
+            $checkStmt->bind_param("s", $username);
+            $checkStmt->execute();
+            $checkStmt->store_result();
+
+            if ($checkStmt->num_rows > 0) {
+                $registrationMessage = '<div class="error">Username already taken</div>';
+            } else {
+                // Hash password sebelum disimpan
+                $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
+
+                // Query untuk menyimpan user baru
+                $query = "INSERT INTO users (username, password, firstname, lastname, college, is_admin) VALUES (?, ?, ?, ?, ?, 0)";
+                $stmt = $mysqli->prepare($query);
+                if ($stmt) {
+                    $stmt->bind_param("sssss", $username, $hashedPassword, $firstname, $lastname, $college);
+
+                    if ($stmt->execute()) {
+                        $registrationMessage = '<div class="success">Account created successfully</div>';
                     } else {
                         $registrationMessage = '<div class="error">Error creating account</div>';
                     }
-                } else {
-                    $registrationMessage = '<div class="success">Account created successfully</div>';
+                    $stmt->close();
                 }
-                $stmt->close();
             }
+            $checkStmt->close();
         }
         $mysqli->close();
     }
 }
+
 ?>
 
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">

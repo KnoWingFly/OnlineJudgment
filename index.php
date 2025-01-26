@@ -16,14 +16,11 @@ $userid = $_SESSION['userid'];
 include('settings.php');
 
 
-$host = 'localhost';     
-$dbname = 'onj';  
-$db_username = 'root';
-$db_password = ''; 
+$host = 'localhost';      
 
 try {
     // Create a PDO connection
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $db_username, $db_password);
+    $pdo = new PDO("mysql:host=$host;dbname=$DBNAME;charset=utf8", $DBUSER, $DBPASS);
     
     // Set the PDO error mode to exception
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);

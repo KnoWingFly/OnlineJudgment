@@ -1,5 +1,4 @@
 <?php
-
 /*
 * @copyright (c) 2008 Nicolo John Davis
 * @license http://opensource.org/licenses/gpl-license.php GNU Public License
@@ -9,161 +8,130 @@ session_start();
 include('settings.php');
 ?>
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
+    <meta name="Keywords" content="programming, contest, coding, judge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+    <meta name="Distribution" content="Global" />
+    <meta name="Robots" content="index,follow" />
+    <link rel="stylesheet" href="images/Envision.css" type="text/css" />
+    <title>Programming Contest</title>
+    <script src="jquery-1.3.1.js"></script>
+    <?php include('timer.php'); ?>
+    <script>
+        $(document).ready(function() { 
+            setInterval("dispTime()", 1000); 
+            dispTime(); 
 
-<meta name="Keywords" content="programming, contest, coding, judge" />
-<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
-<meta name="Distribution" content="Global" />
-<meta name="Robots" content="index,follow" />
+            $('form').submit(function() {
+                const oldPass = $("input[name='old_pass']").val();
+                const newPass = $("input[name='new_pass']").val();
+                const confPass = $("input[name='conf_new_pass']").val();
 
-<link rel="stylesheet" href="images/Envision.css" type="text/css" />
+                $('#error').hide();
 
-<title>Programming Contest</title>
-
-<script type="text/javascript" src="jquery-1.3.1.js"></script>
-<?php include('timer.php'); ?>
-<script type="text/javascript">
-<!--
-
-$(document).ready(function(){ 
-		setInterval("dispTime()", 1000); 
-		dispTime(); 
-
-		
-		$('form').submit( function() {
-				var oldPass = $("input[name='old_pass']").attr('value');
-				var newPass = $("input[name='new_pass']").attr('value');
-				var confPass = $("input[name='conf_pass']").attr('value');
-				
-				$('#error').hide();
-
-				if(oldPass.length == 0)
-				{
-					$('#error').text('Old Password field cannot be left blank');
-					$('#error').attr('class', 'error');
-					$('#error').fadeIn('slow');
-					return false;
-				}
-				if(newPass.length == 0)
-				{
-					$('#error').text('New Password field cannot be left blank');
-					$('#error').attr('class', 'error');
-					$('#error').fadeIn('slow');
-					return false;
-				}
-				if(confPass.length == 0)
-				{
-					$('#error').text('Confirm Password field cannot be left blank');
-					$('#error').attr('class', 'error');
-					$('#error').fadeIn('slow');
-					return false;
-				}
-
-				
-
-			});
-
-	} );
-
--->
-</script>
-	
+                if (oldPass.length === 0) {
+                    $('#error').text('Old Password field cannot be left blank');
+                    $('#error').attr('class', 'error');
+                    $('#error').fadeIn('slow');
+                    return false;
+                }
+                if (newPass.length === 0) {
+                    $('#error').text('New Password field cannot be left blank');
+                    $('#error').attr('class', 'error');
+                    $('#error').fadeIn('slow');
+                    return false;
+                }
+                if (confPass.length === 0) {
+                    $('#error').text('Confirm Password field cannot be left blank');
+                    $('#error').attr('class', 'error');
+                    $('#error').fadeIn('slow');
+                    return false;
+                }
+                if (newPass !== confPass) {
+                    $('#error').text('New Password and Confirm Password do not match');
+                    $('#error').attr('class', 'error');
+                    $('#error').fadeIn('slow');
+                    return false;
+                }
+            });
+        });
+    </script>
 </head>
-
 <body class="menu1">
-<!-- wrap starts here -->
 <div id="wrap">
-		
-		<!--header -->
-		<?php include('Layout/header.php'); ?>
-		
-		<!-- menu -->	
-		<?php include('Layout/menu.php'); ?>
-			
-		<!-- content-wrap starts here -->
-		<div id="content-wrap">
-				
-			<div id="main">
+    <?php include('Layout/header.php'); ?>
+    <?php include('Layout/menu.php'); ?>
 
+    <div id="content-wrap">
+        <div id="main">
+            <?php
+            if (isset($_SESSION['isloggedin']) && $_SESSION['isloggedin'] === "Yes" && isset($_POST['old_pass'])) {
+                $mysqli = new mysqli('localhost', $DBUSER, $DBPASS, $DBNAME);
 
-<?php
-if(isset($_SESSION['isloggedin']) == "Yes" && $_POST['old_pass'])
-{
-	$cn = mysql_connect('localhost', $DBUSER, $DBPASS);
-	mysql_select_db($DBNAME, $cn);
-	$id = $_SESSION['userid'];
-	$password = $_POST['old_pass'];
+                if ($mysqli->connect_error) {
+                    die('<div class="error">Database connection failed: ' . $mysqli->connect_error . '</div>');
+                }
 
-	$query = "select * from `users` where `id` = '$id' and `password` = '$password'";
-	$logged = mysql_query($query);
-	$logged = mysql_fetch_array($logged);
-	
-	if(count($logged) > 0){
-		$new_pass = $_POST['new_pass'];
-		$query = "update users set password='$new_pass' where id='$id'";
-		mysql_query($query);
-	}	
-	else{
-		print '<div id="error" class="error" style="display: one">Error changing pasword</div>';
-		$printedError = true;
-	}
-	mysql_close($cn);
-}
+                $id = $_SESSION['userid'];
+                $oldPassword = $_POST['old_pass'];
 
-		if($printedError == false)
-			print '<div id="error" class="success" style="display: none">Error</div>';
+                $query = "SELECT password FROM users WHERE id = ?";
+                $stmt = $mysqli->prepare($query);
+                $stmt->bind_param("i", $id);
+                $stmt->execute();
+                $stmt->bind_result($hashedPassword);
+                $stmt->fetch();
+                $stmt->close();
 
-		echo <<<EOL
-		<form style="position: relative; margin-left: auto; margin-right: auto; width: 250px; background-color: #ECF1EF;" action="personal.php" method="post">			
-		<p>			
-		<label>Old Password</label>
-		<input name="old_pass" value="" type="password" size="30" />
-		<label>New Password (if needed to be changed)</label>
-		<input name="new_pass" value="" type="password" size="30" />	
-		<label>Confirm New Password</label>
-		<input name="conf_new_pass" value="" type="password" size="30" />				
-		
-		<br />	
-		<div style="position: relative; width: 100px; text-align: center; margin-left: auto; margin-right: auto; margin-bottom: 10px">
-			<input id="loginbutton" class="button" type="submit" name="login" value="Login" />		
-		</div>
-		</p>		
+                if (password_verify($oldPassword, $hashedPassword)) {
+                    $newPassword = $_POST['new_pass'];
+                    $hashedNewPassword = password_hash($newPassword, PASSWORD_BCRYPT);
 
-		</form>	
+                    $updateQuery = "UPDATE users SET password = ? WHERE id = ?";
+                    $updateStmt = $mysqli->prepare($updateQuery);
+                    $updateStmt->bind_param("si", $hashedNewPassword, $id);
 
-		
-EOL;
+                    if ($updateStmt->execute()) {
+                        echo '<div id="error" class="success">Password changed successfully</div>';
+                    } else {
+                        echo '<div id="error" class="error">Error changing password</div>';
+                    }
 
+                    $updateStmt->close();
+                } else {
+                    echo '<div id="error" class="error">Old password is incorrect</div>';
+                }
 
-?>
-
-
-		<!-- main ends here -->
-		</div>
-
-		<div id="sidebar">
-
-		<h3 id="timeheading"></h3>
-
-		<ul class="sidemenu">
-		<li id="time"></li>
-		</ul>
-
-		</div>
-		
-		<!-- content-wrap ends here -->	
-		</div>
-					
-		<!--footer starts here-->
-		<div id="footer">
-			<?php include('Layout/footer.php'); ?>
-		</div>	
-
-<!-- wrap ends here -->
+                $mysqli->close();
+            }
+            ?>
+            <form style="position: relative; margin-left: auto; margin-right: auto; width: 250px; background-color: #ECF1EF;" action="personal.php" method="post">
+                <p>
+                    <label>Old Password</label>
+                    <input name="old_pass" value="" type="password" size="30" />
+                    <label>New Password</label>
+                    <input name="new_pass" value="" type="password" size="30" />
+                    <label>Confirm New Password</label>
+                    <input name="conf_new_pass" value="" type="password" size="30" />
+                    <br />
+                    <div style="position: relative; width: 100px; text-align: center; margin-left: auto; margin-right: auto; margin-bottom: 10px">
+                        <input id="loginbutton" class="button" type="submit" name="change_password" value="Change Password" />
+                    </div>
+                </p>
+            </form>
+        </div>
+        <div id="sidebar">
+            <h3 id="timeheading"></h3>
+            <ul class="sidemenu">
+                <li id="time"></li>
+            </ul>
+        </div>
+    </div>
+    <div id="footer">
+        <?php include('Layout/footer.php'); ?>
+    </div>
 </div>
-
 </body>
 </html>
