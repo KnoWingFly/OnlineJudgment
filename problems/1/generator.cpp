@@ -1,27 +1,23 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-
-int main() {
-    freopen("in", "w", stdout);
+int main(){
+    int n;
+    freopen("in","w",stdout);
     srand(time(NULL));
-
-    int c = 20; // Number of test cases
-    printf("%d\n", c);
-
-    for (int i = 0; i < c; i++) {
-        int n = 2 + rand() % 100; // Array size (minimum 2 to ensure valid two-sum)
-        int target = rand() % 200 - 100; // Target value between -100 and 100
-
-        printf("%d %d\n", n, target);
-
-        for (int j = 0; j < n; j++) {
-            int num = rand() % 201 - 100; // Array values between -100 and 100
-            printf("%d ", num);
+    printf("%d\n",20);
+    for(int i = 0; i < 20;i++){
+        int a,b,c;
+        a = 1+rand()%10000;
+        b = 1+rand()%10000;
+        c = 1+rand()%2000;
+        printf("%d %d %d\n",a,b,c);
+        for(int j = 0; j < a;j++){
+            int d,e;
+            d = 1+rand()%100;
+            e = 1+rand()%10000;
+            printf("%d %d\n",d,e);
         }
-
-        printf("\n");
     }
-
     return 0;
 }

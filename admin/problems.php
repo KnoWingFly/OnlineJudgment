@@ -5,14 +5,12 @@ if (!isset($_SESSION['isloggedin']) || $_SESSION['admin'] != true) {
     exit(0);
 }
 
-// Enable error reporting
 ini_set('display_errors', 1);
 ini_set('log_errors', 1);
 error_reporting(E_ALL);
 
 include('../settings.php');
 
-// Test directory permissions
 $problemsDir = "../problems/";
 if (!file_exists($problemsDir)) {
     if (!mkdir($problemsDir, 0777, true)) {
@@ -24,27 +22,28 @@ if (!is_writable($problemsDir)) {
     die("Cannot write to problems directory. Check permissions.");
 }
 
-// Debug logging function
 function debug_log($message)
 {
     error_log("[Debug] " . $message);
 }
 
-// Function to safely handle file uploads
-function saveUploadedFile($file, $problemId, $filename)
+function saveUploadedFile($file, $problemId, $filename, $subdir = '')
 {
     debug_log("Starting file upload for problem $problemId: $filename");
 
-    $targetDir = "../problems/" . $problemId . "/";
+    $targetDir = "../problems/" . $problemId . "/" . ($subdir ? $subdir . "/" : "");
 
-    // Create directory if it doesn't exist with proper permissions
     if (!file_exists($targetDir)) {
         debug_log("Creating directory: $targetDir");
         if (!mkdir($targetDir, 0777, true)) {
             debug_log("Failed to create directory");
             return false;
         }
-        chmod($targetDir, 0777); // Ensure directory is writable
+        chmod($targetDir, 0777);
+    }
+
+    if ($file['error'] == UPLOAD_ERR_NO_FILE) {
+        return true;
     }
 
     if ($file['error'] !== UPLOAD_ERR_OK) {
@@ -65,107 +64,23 @@ function saveUploadedFile($file, $problemId, $filename)
     return true;
 }
 
-// Function to compile and test problem
-function compileAndTest($problemId)
+function generateStatement($title, $timeLimit, $inputFormat, $outputFormat, $sampleInput, $sampleOutput, $description, $constraints, $imagePath = null)
 {
-    $dir = realpath("../problems/" . $problemId . "/");
-    $output = array();
-    $returnVar = 0;
+    $imageSection = '';
 
-    debug_log("Starting compilation and testing for problem $problemId");
-    debug_log("Working directory: $dir");
-
-    // Convert Windows path to WSL path
-    $wslDir = trim(shell_exec('wsl wslpath "' . $dir . '"'));
-    debug_log("WSL directory path: $wslDir");
-
-    // Ensure all required files exist
-    if (!file_exists($dir . "/generator.cpp") || !file_exists($dir . "/solution.cpp")) {
-        debug_log("Required files missing");
-        return false;
-    }
-
-    // Clear previous files and create new ones
-    $filesToHandle = ['in', 'out', 'generator', 'solution'];
-    foreach ($filesToHandle as $file) {
-        if (file_exists($dir . "/$file")) {
-            unlink($dir . "/$file");
-        }
-        if ($file === 'in' || $file === 'out') {
-            touch($dir . "/$file");
-            chmod($dir . "/$file", 0666);
+    // More robust check for image existence
+    if ($imagePath) {
+        $fullImagePath = "../problems/" . $imagePath;
+        if (file_exists($fullImagePath)) {
+            $imageSection = <<<EOT
+    <font color="#0000FF"><h2>Problem Illustration</h2></font>
+    <div style="text-align: center; margin: 20px 0;">
+        <img src="../problems/{$imagePath}" alt="Problem Illustration" style="max-width: 100%; height: auto;"/>
+    </div>
+EOT;
         }
     }
 
-    // Compile generator
-    $compileGeneratorCmd = 'wsl -e bash -c "cd \'' . $wslDir . '\' && g++ -std=c++11 generator.cpp -o generator"';
-    debug_log("Executing generator compilation: $compileGeneratorCmd");
-    exec($compileGeneratorCmd . " 2>&1", $output, $returnVar);
-    if ($returnVar !== 0) {
-        debug_log("Generator compilation failed: " . implode("\n", $output));
-        return false;
-    }
-
-    // Run generator
-    $runGeneratorCmd = 'wsl -e bash -c "cd \'' . $wslDir . '\' && chmod +x generator && ./generator > in"';
-    debug_log("Executing generator: $runGeneratorCmd");
-    exec($runGeneratorCmd . " 2>&1", $output, $returnVar);
-    if ($returnVar !== 0) {
-        debug_log("Generator execution failed: " . implode("\n", $output));
-        return false;
-    }
-
-    // Verify generator created input
-    if (!file_exists($dir . "/in") || filesize($dir . "/in") === 0) {
-        debug_log("Input file is missing or empty after generator execution");
-        return false;
-    }
-
-    // Compile solution with C++11 support
-    $compileSolutionCmd = 'wsl -e bash -c "cd \'' . $wslDir . '\' && g++ -std=c++11 solution.cpp -o solution"';
-    debug_log("Executing solution compilation: $compileSolutionCmd");
-    exec($compileSolutionCmd . " 2>&1", $output, $returnVar);
-    if ($returnVar !== 0) {
-        debug_log("Solution compilation failed: " . implode("\n", $output));
-        return false;
-    }
-
-    // Set proper permissions
-    exec('wsl -e bash -c "cd \'' . $wslDir . '\' && chmod 666 in out && chmod +x solution"');
-
-    // Run solution in WSL with explicit file handling
-    $runSolutionCmd = 'wsl -e bash -c "cd \'' . $wslDir . '\' && ./solution"';
-    debug_log("Executing solution: $runSolutionCmd");
-    exec($runSolutionCmd . " 2>&1", $output, $returnVar);
-
-    // Log solution execution output for debugging
-    debug_log("Solution execution output: " . implode("\n", $output));
-
-    if ($returnVar !== 0) {
-        debug_log("Solution execution failed with return code: $returnVar");
-        return false;
-    }
-
-    // Verify output file exists and has content
-    if (!file_exists($dir . "/out")) {
-        debug_log("Output file does not exist after solution execution");
-        return false;
-    }
-
-    $outSize = filesize($dir . "/out");
-    if ($outSize === 0) {
-        debug_log("Output file is empty after solution execution");
-        return false;
-    }
-
-    debug_log("Compilation and testing completed successfully");
-    debug_log("Output file size: $outSize bytes");
-    return true;
-}
-
-// Function to generate problem statement HTML
-function generateStatement($title, $timeLimit, $inputFormat, $outputFormat, $sampleInput, $sampleOutput, $description, $constraints)
-{
     return <<<EOT
 <!DOCTYPE html>
 <html>
@@ -176,6 +91,8 @@ function generateStatement($title, $timeLimit, $inputFormat, $outputFormat, $sam
 <body bgcolor="white">
     <font color="#0000FF"><h1>{$title}</h1></font>
     <h3>Time Limit: {$timeLimit}s</h3>
+
+    {$imageSection}
 
     <p align="justify">{$description}</p>
 
@@ -205,7 +122,92 @@ function generateStatement($title, $timeLimit, $inputFormat, $outputFormat, $sam
 EOT;
 }
 
-// Handle form submission
+function compileAndTest($problemId)
+{
+    $dir = realpath("../problems/" . $problemId . "/");
+    $output = array();
+    $returnVar = 0;
+
+    debug_log("Starting compilation and testing for problem $problemId");
+    debug_log("Working directory: $dir");
+
+    $wslDir = trim(shell_exec('wsl wslpath "' . $dir . '"'));
+    debug_log("WSL directory path: $wslDir");
+
+    if (!file_exists($dir . "/generator.cpp") || !file_exists($dir . "/solution.cpp")) {
+        debug_log("Required files missing");
+        return false;
+    }
+
+    $filesToHandle = ['in', 'out', 'generator', 'solution'];
+    foreach ($filesToHandle as $file) {
+        if (file_exists($dir . "/$file")) {
+            unlink($dir . "/$file");
+        }
+        if ($file === 'in' || $file === 'out') {
+            touch($dir . "/$file");
+            chmod($dir . "/$file", 0666);
+        }
+    }
+
+    $compileGeneratorCmd = 'wsl -e bash -c "cd \'' . $wslDir . '\' && g++ -std=c++11 generator.cpp -o generator"';
+    debug_log("Executing generator compilation: $compileGeneratorCmd");
+    exec($compileGeneratorCmd . " 2>&1", $output, $returnVar);
+    if ($returnVar !== 0) {
+        debug_log("Generator compilation failed: " . implode("\n", $output));
+        return false;
+    }
+
+    $runGeneratorCmd = 'wsl -e bash -c "cd \'' . $wslDir . '\' && chmod +x generator && ./generator > in"';
+    debug_log("Executing generator: $runGeneratorCmd");
+    exec($runGeneratorCmd . " 2>&1", $output, $returnVar);
+    if ($returnVar !== 0) {
+        debug_log("Generator execution failed: " . implode("\n", $output));
+        return false;
+    }
+
+    if (!file_exists($dir . "/in") || filesize($dir . "/in") === 0) {
+        debug_log("Input file is missing or empty after generator execution");
+        return false;
+    }
+
+    $compileSolutionCmd = 'wsl -e bash -c "cd \'' . $wslDir . '\' && g++ -std=c++11 solution.cpp -o solution"';
+    debug_log("Executing solution compilation: $compileSolutionCmd");
+    exec($compileSolutionCmd . " 2>&1", $output, $returnVar);
+    if ($returnVar !== 0) {
+        debug_log("Solution compilation failed: " . implode("\n", $output));
+        return false;
+    }
+
+    exec('wsl -e bash -c "cd \'' . $wslDir . '\' && chmod 666 in out && chmod +x solution"');
+
+    $runSolutionCmd = 'wsl -e bash -c "cd \'' . $wslDir . '\' && ./solution"';
+    debug_log("Executing solution: $runSolutionCmd");
+    exec($runSolutionCmd . " 2>&1", $output, $returnVar);
+
+    debug_log("Solution execution output: " . implode("\n", $output));
+
+    if ($returnVar !== 0) {
+        debug_log("Solution execution failed with return code: $returnVar");
+        return false;
+    }
+
+    if (!file_exists($dir . "/out")) {
+        debug_log("Output file does not exist after solution execution");
+        return false;
+    }
+
+    $outSize = filesize($dir . "/out");
+    if ($outSize === 0) {
+        debug_log("Output file is empty after solution execution");
+        return false;
+    }
+
+    debug_log("Compilation and testing completed successfully");
+    debug_log("Output file size: $outSize bytes");
+    return true;
+}
+
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     debug_log("Form submitted");
     try {
@@ -213,11 +215,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             throw new Exception("Invalid action");
         }
 
-        // Validate required fields
         $required_fields = [
             'title',
             'timeLimit',
-            'memoryLimit',
             'points',
             'description',
             'inputFormat',
@@ -232,7 +232,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             }
         }
 
-        // Validate file uploads
         if (!isset($_FILES['generator']) || !isset($_FILES['solution'])) {
             throw new Exception("Missing uploaded files");
         }
@@ -245,34 +244,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         mysqli_begin_transaction($cn);
 
-        // Prepare data
         $title = mysqli_real_escape_string($cn, $_POST['title']);
         $timeLimit = floatval($_POST['timeLimit']);
-        $memoryLimit = intval($_POST['memoryLimit']);
         $points = intval($_POST['points']);
 
-        debug_log("Generating statement HTML");
-        $statementHtml = generateStatement(
-            $title,
-            $timeLimit,
-            mysqli_real_escape_string($cn, $_POST['inputFormat']),
-            mysqli_real_escape_string($cn, $_POST['outputFormat']),
-            mysqli_real_escape_string($cn, $_POST['sampleInput']),
-            mysqli_real_escape_string($cn, $_POST['sampleOutput']),
-            mysqli_real_escape_string($cn, $_POST['description']),
-            mysqli_real_escape_string($cn, $_POST['constraints'])
-        );
+        $imagePath = null;
+        if (isset($_FILES['problemImage']) && $_FILES['problemImage']['error'] == UPLOAD_ERR_OK) {
+            $imageExtension = pathinfo($_FILES['problemImage']['name'], PATHINFO_EXTENSION);
+            $imageName = 'problem_image.' . $imageExtension;
+        }
 
-        // Modified query to include points
         debug_log("Inserting problem into database");
-        $query = "INSERT INTO problems (title, time_limit, memory_limit, points, created_at) 
-             VALUES (?, ?, ?, ?, NOW())";
+        $query = "INSERT INTO problems (title, time_limit, points, created_at) 
+             VALUES (?, ?, ?, NOW())";
         $stmt = mysqli_prepare($cn, $query);
         if (!$stmt) {
             throw new Exception("Prepare failed: " . mysqli_error($cn));
         }
 
-        mysqli_stmt_bind_param($stmt, "sdii", $title, $timeLimit, $memoryLimit, $points);
+        mysqli_stmt_bind_param($stmt, "sdi", $title, $timeLimit, $points);
 
         if (!mysqli_stmt_execute($stmt)) {
             throw new Exception("Database insert failed: " . mysqli_error($cn));
@@ -284,29 +274,52 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
         debug_log("Problem ID: $problemId");
 
-        // Save files
         $problemDir = "../problems/" . $problemId . "/";
 
-        // Create problem directory if it doesn't exist
         if (!file_exists($problemDir)) {
             debug_log("Creating problem directory: $problemDir");
             if (!mkdir($problemDir, 0777, true)) {
                 throw new Exception("Failed to create problem directory");
             }
-            chmod($problemDir, 0777); // Ensure directory is writable
+            chmod($problemDir, 0777);
         }
 
-        // Save statement HTML with error checking
+        $imageFullPath = null;
+        if (isset($_FILES['problemImage']) && $_FILES['problemImage']['error'] == UPLOAD_ERR_OK) {
+            $imagesDir = $problemDir . "Images/";
+            if (!file_exists($imagesDir)) {
+                mkdir($imagesDir, 0777, true);
+                chmod($imagesDir, 0777);
+            }
+
+            $imageName = 'problem_image.' . $imageExtension;
+            $imageFullPath = $problemId . "/Images/" . $imageName;
+            $imageTargetPath = $imagesDir . $imageName;
+
+            if (!move_uploaded_file($_FILES['problemImage']['tmp_name'], $imageTargetPath)) {
+                throw new Exception("Failed to save problem image");
+            }
+            chmod($imageTargetPath, 0666);
+        }
+
+        debug_log("Generating statement HTML");
+        $statementHtml = generateStatement(
+            $title,
+            $timeLimit,
+            mysqli_real_escape_string($cn, $_POST['inputFormat']),
+            mysqli_real_escape_string($cn, $_POST['outputFormat']),
+            mysqli_real_escape_string($cn, $_POST['sampleInput']),
+            mysqli_real_escape_string($cn, $_POST['sampleOutput']),
+            mysqli_real_escape_string($cn, $_POST['description']),
+            mysqli_real_escape_string($cn, $_POST['constraints']),
+            $imageFullPath
+        );
+
         debug_log("Saving statement HTML");
         if (file_put_contents($problemDir . "statement.html", $statementHtml) === false) {
             throw new Exception("Failed to save statement HTML: " . error_get_last()['message']);
         }
         chmod($problemDir . "statement.html", 0666);
-
-        debug_log("Saving statement HTML");
-        if (!file_put_contents($problemDir . "statement.html", $statementHtml)) {
-            throw new Exception("Failed to save statement HTML");
-        }
 
         debug_log("Saving uploaded files");
         if (!saveUploadedFile($_FILES["generator"], $problemId, "generator.cpp")) {
@@ -404,8 +417,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         .form-group input[type="submit"] {
             padding: 8px 20px;
-            background: #88ac0b;
-            color: white;
+            background: #88ac0b color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
@@ -474,11 +486,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         </div>
 
                         <div class="form-group">
-                            <label>Memory Limit (MB):</label>
-                            <input type="number" name="memoryLimit" required />
-                        </div>
-
-                        <div class="form-group">
                             <label>Points:</label>
                             <input type="number" name="points" required />
                         </div>
@@ -522,6 +529,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         <div class="form-group">
                             <label>Solution (C++):</label>
                             <input type="file" name="solution" accept=".cpp" required />
+                        </div>
+
+                        <div class="form-group">
+                            <label>Problem Illustration Image (Optional):</label>
+                            <input type="file" name="problemImage" accept="image/*" />
                         </div>
 
                         <div class="form-group">

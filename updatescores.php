@@ -12,19 +12,19 @@ try {
         die(json_encode(array('status' => 'error', 'message' => 'Connection failed')));
     }
 
-    // Update scores
+    // Update scores by summing points for distinct correctly solved problems
     $updateScores = "
         UPDATE users u 
-        LEFT JOIN (
-            SELECT userid, COUNT(DISTINCT problemid) * 10 as total_points
-            FROM submissions 
-            WHERE status = 0 
-            GROUP BY userid
-        ) s ON u.id = s.userid 
-        SET u.score = COALESCE(s.total_points, 0)";
+        SET u.score = (
+            SELECT COALESCE(SUM(p.points), 0)
+            FROM submissions s
+            JOIN problems p ON s.problemid = p.id
+            WHERE s.userid = u.id AND s.status = 0
+            GROUP BY s.userid
+        )";
         
     if (!$db->query($updateScores)) {
-        die(json_encode(array('status' => 'error', 'message' => 'Score update failed')));
+        die(json_encode(array('status' => 'error', 'message' => 'Score update failed: ' . $db->error)));
     }
 
     // Update ranks
@@ -38,13 +38,13 @@ try {
         SET u.ranks = r.new_rank";
 
     if (!$db->query($updateRanks)) {
-        die(json_encode(array('status' => 'error', 'message' => 'Rank update failed')));
+        die(json_encode(array('status' => 'error', 'message' => 'Rank update failed: ' . $db->error)));
     }
 
     echo json_encode(array('status' => 'success'));
 
 } catch (Exception $e) {
-    echo json_encode(array('status' => 'error', 'message' => 'Update failed'));
+    echo json_encode(array('status' => 'error', 'message' => 'Update failed: ' . $e->getMessage()));
 } finally {
     if (isset($db)) {
         $db->close();

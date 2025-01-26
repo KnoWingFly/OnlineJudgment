@@ -9,6 +9,19 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
+// Fetch problem points from the database
+$points = array();
+$pointsQuery = "SELECT id, points FROM problems ORDER BY id";
+$pointsResult = $conn->query($pointsQuery);
+
+if (!$pointsResult) {
+    die("Failed to fetch problem points: " . $conn->error);
+}
+
+while($pointRow = $pointsResult->fetch_assoc()) {
+    $points[$pointRow['id'] - 1] = intval($pointRow['points']);
+}
+
 $nProb = count($points);
 $dataSub = array();
 $idmaps = array();

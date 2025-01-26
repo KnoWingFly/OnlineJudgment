@@ -29,8 +29,8 @@ public:
 };
 
 int main() {
-    // freopen("in", "r", stdin);
-    // freopen("out", "w", stdout);
+    freopen("in", "r", stdin);
+    freopen("out", "w", stdout);
     int c;
     scanf("%d", &c);
     Solution solution;

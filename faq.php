@@ -129,7 +129,7 @@ $(document).ready(function(){
 			</div>
 
 			<div id="sidebar">
-				<?php include('sidebar.php'); ?>
+				<?php include('Layout/sidebar.php'); ?>
 			</div>
 		
 		<!-- content-wrap ends here -->	
@@ -137,7 +137,7 @@ $(document).ready(function(){
 					
 		<!--footer starts here-->
 		<div id="footer">
-			<?php include('footer.php'); ?>
+			<?php include('Layout/footer.php'); ?>
 		</div>	
 
 <!-- wrap ends here -->
