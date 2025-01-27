@@ -1,9 +1,5 @@
-<!--
-* @copyright (c) 2008 Nicolo John Davis
-* @license http://opensource.org/licenses/gpl-license.php GNU Public License
--->
-
-<div id="header">			
-	<h1 id="logo-text"><a href="index.php">Programming Contest</a></h1>		
-	<p id="slogan" style="margin-left: 420px">powered by <a style="color:white; text-decoration: none; font-weight: bold" href="https://sourceforge.net/projects/onj">ONJ</a></p>		
+<div id="header" class="flex items-center px-8 py-5">
+    <a href="index.php" class="flex items-center no-underline">
+        <img src="images/LogoUMNPC.png" alt="UMN Programming Club Logo" class="h-24 w-auto mr-3">
+    </a>
 </div>

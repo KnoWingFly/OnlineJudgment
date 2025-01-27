@@ -67,8 +67,8 @@ if (!$result) {
 while($row = $result->fetch_assoc()) {
     $id = $row['userid'];
     $probid = $row['problemid'];
-    $stat = intval($row['status']); // Ensure status is an integer
-    $time = intval($row['time']);   // Ensure time is an integer
+    $stat = intval($row['status']);
+    $time = intval($row['time']);
     
     if (isset($idmaps[$id])) {
         $ctr = $idmaps[$id];
@@ -77,11 +77,9 @@ while($row = $result->fetch_assoc()) {
             $dataSub[$ctr]['last_submission'] = $time;
         }
         
-        // Track submission
         $dataSub[$ctr]['tries_'.$probid]++;
         $dataSub[$ctr]['last_status_'.$probid] = $stat;
         
-        // Update score if correct
         if ($stat == 0 && !$dataSub[$ctr]['solved_'.$probid]) {
             $dataSub[$ctr]['solved_'.$probid] = true;
             $dataSub[$ctr]['score'] += $points[$probid-1];
@@ -97,84 +95,86 @@ usort($dataSub, function($a, $b) {
     return $a['last_submission'] - $b['last_submission'];
 });
 
-$class = "row-a";
+// Output the scoreboard table with Tailwind CSS classes
+print '<thead>';
+print '<tr>';
+print '<th class="bg-blue-600 p-4 text-white font-medium">Position</th>';
+print '<th class="bg-blue-600 p-4 text-white font-medium">User</th>';
 
-// Output table header
-print '<tr><th>Position</th><th>User</th>';
 for($i=1; $i<=count($points); $i++) {
-    print "<th>" . htmlspecialchars($i) . "</th>";
+    print "<th class='bg-blue-600 p-4 text-white font-medium'>" . htmlspecialchars($i) . "</th>";
 }
-print '<th>Score</th><th>Last Update</th></tr>';
 
-// Set timezone to match your server's timezone
-date_default_timezone_set('Asia/Jakarta'); // Adjust this to your timezone
+print '<th class="bg-blue-600 p-4 text-white font-medium">Total Problem Submit</th>';
+print '<th class="bg-blue-600 p-4 text-white font-medium">Time</th>';
+print '</tr>';
+print '</thead>';
 
-// Output data rows
+print '<tbody>';
 for($i=0; $i<count($dataSub); $i++) {
     $rankNow = $i+1;
     $name = htmlspecialchars($dataSub[$i]['username']);
     
-    print "<tr ";
+    // Alternate row backgrounds and highlight current user
+    $rowClass = ($i % 2 == 0) ? 'bg-opacity-5 bg-white' : 'bg-opacity-10 bg-white';
     if(isset($username) && $dataSub[$i]['username'] == $username) {
-        print "style='font-weight: bold;' ";
-    }
-    print "class='" . htmlspecialchars($class) . "'><td>" . $rankNow . "</td><td>" . $name . "</td>";
-
-    for($j=1; $j<=$nProb; $j++) {
-        $tries = $dataSub[$i]['tries_'.$j];
-        $status = intval($dataSub[$i]['last_status_'.$j]); // Ensure status is an integer
-        $solved = $dataSub[$i]['solved_'.$j];
-        
-        if ($tries == 0) {
-            // No attempts - default color
-            print "<td class='problem-cell' style='background-color:#f5f5f5;'>--</td>";
-        } else {
-            // Define status colors and messages
-            $statusColor = '#f5f5f5'; // Default light gray
-            $statusMessage = "-- ($tries)";
-            $statusTitle = 'Unknown Status';
-            
-            switch($status) {
-                case 0: // Accepted
-                    $statusColor = '#90EE90';
-                    $statusMessage = "✓ ($tries)";
-                    $statusTitle = 'Solved correctly';
-                    break;
-                case 1: // Compile Error
-                    $statusColor = '#FFB6C1';
-                    $statusMessage = "CE ($tries)";
-                    $statusTitle = 'Compile Error';
-                    break;
-                case 2: // Wrong Answer
-                    $statusColor = '#FFB6C1';
-                    $statusMessage = "✗ ($tries)";
-                    $statusTitle = 'Wrong Answer';
-                    break;
-                case 3: // Time Limit Exceeded
-                    $statusColor = '#FFB6C1';
-                    $statusMessage = "TL ($tries)";
-                    $statusTitle = 'Time Limit Exceeded';
-                    break;
-                case 5: // Runtime Error
-                    $statusColor = '#FFB6C1';
-                    $statusMessage = "RE ($tries)";
-                    $statusTitle = 'Runtime Error';
-                    break;
-            }
-            
-            print "<td class='problem-cell' style='background-color:" . $statusColor . ";' title='" . 
-                  htmlspecialchars($statusTitle) . "'>" . 
-                  htmlspecialchars($statusMessage) . "</td>";
-        }
+        $rowClass .= ' font-bold bg-opacity-20 bg-white';
     }
     
-    $score = htmlspecialchars($dataSub[$i]['score']);
-    // Format the last update time using the server's timezone
-    $last_update = date('H:i:s', $dataSub[$i]['last_submission']);
-    print "<td>$score</td><td>$last_update</td></tr>";
+    print "<tr class='$rowClass transition-colors duration-150'>";
+    print "<td class='p-4 text-center border border-gray-800'>" . $rankNow . "</td>";
+    print "<td class='p-4 text-center border border-gray-800'>" . $name . "</td>";
 
-    $class = ($class == "row-a") ? "row-b" : "row-a";
+    // Problem status cells
+    for($j=1; $j<=$nProb; $j++) {
+        $tries = $dataSub[$i]['tries_'.$j];
+        $status = intval($dataSub[$i]['last_status_'.$j]);
+        $solved = $dataSub[$i]['solved_'.$j];
+        
+        print "<td class='p-4 text-center border border-gray-800'>";
+        print "<div class='flex items-center justify-center w-12 h-12 mx-auto'>";
+        
+        if ($tries == 0) {
+            // No attempts
+            print "<span class='text-2xl text-gray-500'>—</span>";
+        } else {
+            if ($solved) {
+                // Problem solved
+                print "<span class='text-2xl text-green-500'>✓</span>";
+            } else {
+                // Different error states
+                switch($status) {
+                    case 1: // Compile Error
+                        print "<span class='text-red-500 font-semibold'>CE</span>";
+                        break;
+                    case 2: // Wrong Answer
+                        print "<span class='text-2xl text-red-500'>—</span>";
+                        break;
+                    case 3: // Time Limit
+                        print "<span class='text-red-500 font-semibold'>TL</span>";
+                        break;
+                    case 5: // Runtime Error
+                        print "<span class='text-red-500 font-semibold'>RE</span>";
+                        break;
+                    default:
+                        print "<span class='text-2xl text-gray-500'>—</span>";
+                }
+            }
+        }
+        
+        print "</div>";
+        print "</td>";
+    }
+    
+    // Score and time
+    $score = htmlspecialchars($dataSub[$i]['score']);
+    $last_update = date('i \m\i\n\u\t\e', $dataSub[$i]['last_submission']);
+    
+    print "<td class='p-4 text-center border border-gray-800'>" . $score . "</td>";
+    print "<td class='p-4 text-center border border-gray-800'>" . $last_update . "</td>";
+    print "</tr>";
 }
+print '</tbody>';
 
 $conn->close();
 ?>

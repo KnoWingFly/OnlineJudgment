@@ -8,14 +8,18 @@ if (!isset($_SESSION['isloggedin'])) {
 include('settings.php');
 
 // Print table header
-print '<tr>
-    <th>ID</th>
-    <th>Time</th>
-    <th>Problem</th>
-    <th>Status</th>
-    <th>Execution Time</th>
-    <th>Actions</th>
-</tr>';
+echo '<thead>';
+echo '<tr>';
+echo '<th class="bg-blue-600 p-4 text-white font-medium">#</th>';
+echo '<th class="bg-blue-600 p-4 text-white font-medium">When</th>';
+echo '<th class="bg-blue-600 p-4 text-white font-medium">Problem</th>';
+echo '<th class="bg-blue-600 p-4 text-white font-medium">Lang</th>';
+echo '<th class="bg-blue-600 p-4 text-white font-medium">Verdict</th>';
+echo '<th class="bg-blue-600 p-4 text-white font-medium">Time</th>';
+echo '<th class="bg-blue-600 p-4 text-white font-medium">Actions</th>';
+echo '</tr>';
+echo '</thead>';
+echo '<tbody>';
 
 $conn = new mysqli('localhost', $DBUSER, $DBPASS, $DBNAME);
 
@@ -23,8 +27,7 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-// Modified query to only show current user's submissions
-$query = "SELECT id, time, problemid, status, execution_time 
+$query = "SELECT id, time, problemid, status, execution_time, filename 
           FROM submissions 
           WHERE userid = ? 
           ORDER BY time DESC 
@@ -35,51 +38,56 @@ $stmt->bind_param("i", $_SESSION['userid']);
 $stmt->execute();
 $result = $stmt->get_result();
 
+function detectLanguage($filename) {
+    $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+    return match($extension) {
+        'c' => 'C',
+        'cpp', 'cc', 'cxx' => 'C++',
+        'py' => 'Python',
+        'go' => 'Go',
+        'java' => 'Java',
+        default => 'Unknown'
+    };
+}
+
 if ($result) {
+    $rowCount = 0;
     while ($row = $result->fetch_assoc()) {
-        // Convert status code to text
+        $rowClass = ($rowCount % 2 == 0) ? 'bg-opacity-5 bg-white' : 'bg-opacity-10 bg-white';
+        
         $status = match((int)$row['status']) {
-            0 => "Accepted",
-            1 => "Compile Error",
-            2 => "Wrong Answer",
-            3 => "Time Limit",
-            4 => "Invalid File",
-            5 => "Runtime Error",
-            default => "System Error"
+            0 => ["✓", "text-green-500"],
+            1 => ["CE", "text-red-500"],
+            2 => ["—", "text-red-500"],
+            3 => ["TL", "text-red-500"],
+            4 => ["IF", "text-red-500"],
+            5 => ["RE", "text-red-500"],
+            default => ["SE", "text-red-500"]
         };
 
-        // Format the timestamp
         $submissionTime = new DateTime();
         $submissionTime->setTimestamp($row['time']);
-        $formattedTime = $submissionTime->format('Y-m-d H:i:s');
+        $formattedTime = $submissionTime->format('M/d/Y H:i');
 
-        // Set row class based on status
-        $rowClass = ($status === "Accepted") ? "correct" : "wrong";
-
-        // Format execution time
-        $executionTime = number_format($row['execution_time'], 3);
-
-        // Output the row with styled view code button
-        printf(
-            "<tr class='%s'>
-                <td>%d</td>
-                <td>%s</td>
-                <td>%d</td>
-                <td>%s</td>
-                <td>%s s</td>
-                <td><button class='view-code-btn' onclick='viewCode(%d)'>View Code</button></td>
-            </tr>",
-            htmlspecialchars($rowClass),
-            (int)$row['id'],
-            htmlspecialchars($formattedTime),
-            (int)$row['problemid'],
-            htmlspecialchars($status),
-            htmlspecialchars($executionTime),
-            (int)$row['id']
-        );
+        $language = detectLanguage($row['filename']);
+        
+        echo "<tr class='$rowClass transition-colors duration-150'>";
+        echo "<td class='p-4 text-center border border-gray-800'>" . (int)$row['id'] . "</td>";
+        echo "<td class='p-4 text-center border border-gray-800'>" . htmlspecialchars($formattedTime) . "</td>";
+        echo "<td class='p-4 text-center border border-gray-800'>" . (int)$row['problemid'] . "</td>";
+        echo "<td class='p-4 text-center border border-gray-800'>" . htmlspecialchars($language) . "</td>";
+        echo "<td class='p-4 text-center border border-gray-800'><span class='" . $status[1] . "'>" . $status[0] . "</span></td>";
+        echo "<td class='p-4 text-center border border-gray-800'>" . number_format($row['execution_time'] * 1000, 0) . " ms</td>";
+        echo "<td class='p-4 text-center border border-gray-800'>";
+        echo "<button onclick='viewCode(" . (int)$row['id'] . ")' class='bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors duration-150'>View Code</button>";
+        echo "</td>";
+        echo "</tr>";
+        
+        $rowCount++;
     }
     $result->free();
 }
 
+echo '</tbody>';
 $conn->close();
 ?>
