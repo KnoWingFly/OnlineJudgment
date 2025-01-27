@@ -2,94 +2,92 @@
 session_start();
 include('settings.php');
 
-// Error reporting for debugging
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-// Function to clean input data
 function cleanInput($data) {
-    return htmlspecialchars(strip_tags(trim($data)));
+    return htmlspecialchars(strip_tags(trim($data)), ENT_QUOTES, 'UTF-8');
 }
 
-// Function to safely connect to database
 function dbConnect($DBUSER, $DBPASS, $DBNAME) {
     $mysqli = new mysqli('localhost', $DBUSER, $DBPASS, $DBNAME);
     if ($mysqli->connect_error) {
-        return false;
+        die("Database connection failed: " . $mysqli->connect_error);
     }
     return $mysqli;
 }
 
-// Handle Login with prepared statements
 function handleLogin($username, $password, $DBUSER, $DBPASS, $DBNAME) {
     $mysqli = dbConnect($DBUSER, $DBPASS, $DBNAME);
-    if (!$mysqli) {
-        return array('error' => 'Database connection failed');
-    }
-    
-    $query = "SELECT id, username, password, is_admin FROM users WHERE username = ?";
-    $stmt = $mysqli->prepare($query);
+
+    $stmt = $mysqli->prepare("SELECT id, username, password, is_admin FROM users WHERE username = ?");
     if (!$stmt) {
-        $mysqli->close();
-        return array('error' => 'Query preparation failed');
+        return ['error' => 'Query preparation failed'];
     }
 
     $stmt->bind_param("s", $username);
     $stmt->execute();
-    $result = $stmt->get_result();
-    $user = $result->fetch_assoc();
-    
+    $result = $stmt->get_result()->fetch_assoc();
     $stmt->close();
     $mysqli->close();
-    
-    if ($user && password_verify($password, $user['password'])) {
-        return $user; // Login berhasil
-    } else {
-        return null; // Login gagal
+
+    if ($result && password_verify($password, $result['password'])) {
+        return $result;
     }
+    return null;
 }
 
+function handleRegister($username, $password, $firstname, $lastname, $college, $DBUSER, $DBPASS, $DBNAME) {
+    $mysqli = dbConnect($DBUSER, $DBPASS, $DBNAME);
+
+    $stmt = $mysqli->prepare("SELECT id FROM users WHERE username = ?");
+    $stmt->bind_param("s", $username);
+    $stmt->execute();
+    if ($stmt->get_result()->num_rows > 0) {
+        $stmt->close();
+        $mysqli->close();
+        return ['error' => 'Username already taken'];
+    }
+    $stmt->close();
+
+    $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+
+    $stmt = $mysqli->prepare("INSERT INTO users (username, password, firstname, lastname, college) VALUES (?, ?, ?, ?, ?)");
+    $stmt->bind_param("sssss", $username, $hashedPassword, $firstname, $lastname, $college);
+    
+    if ($stmt->execute()) {
+        $stmt->close();
+        $mysqli->close();
+        return ['success' => 'Registration successful! Redirecting to login...'];
+    } else {
+        $stmt->close();
+        $mysqli->close();
+        return ['error' => 'Registration failed. Please try again.'];
+    }
+}
 
 $loginError = '';
-$registrationMessage = '';
+$registerMessage = '';
+$registerSuccess = false;
 
-// Check if already logged in
-if(isset($_SESSION['isloggedin']) && $_SESSION['isloggedin'] == "Yes") {
-    // Check if user is admin and redirect accordingly
-    if(isset($_SESSION['admin']) && $_SESSION['admin'] === true) {
-        header("Location: admin/admin.php");
-    } else {
-        header("Location: index.php");
-    }
-    exit();
-}
-
-// Handle Login Form Submission
-if(isset($_POST['login']) && isset($_POST['username']) && isset($_POST['password'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     $username = cleanInput($_POST['username']);
     $password = cleanInput($_POST['password']);
-    
-    if(empty($username) || empty($password)) {
+
+    if (empty($username) || empty($password)) {
         $loginError = "Username and password are required";
     } else {
         $result = handleLogin($username, $password, $DBUSER, $DBPASS, $DBNAME);
-        
         if (isset($result['error'])) {
             $loginError = "System error: Please try again later";
-        } 
-        elseif ($result) {
-            // Set session variables
-            $_SESSION['isloggedin'] = "Yes";
+        } elseif ($result) {
+            $_SESSION['isloggedin'] = true;
             $_SESSION['userid'] = $result['id'];
-            $_SESSION['username'] = $username;
-            
-            // Set admin privileges if is_admin is 1 and redirect accordingly
-            if($result['is_admin'] == 1) {
+            $_SESSION['username'] = $result['username'];
+            if ($result['is_admin']) {
                 $_SESSION['admin'] = true;
-                header("Location: admin/admin.php");
-            } else {
-                header("Location: index.php");
             }
+            header("Location: " . ($result['is_admin'] ? "admin/admin.php" : "index.php"));
             exit();
         } else {
             $loginError = "Invalid username or password";
@@ -97,226 +95,100 @@ if(isset($_POST['login']) && isset($_POST['username']) && isset($_POST['password
     }
 }
 
-// Handle Registration
-if (isset($_POST['register'])) {
-    $mysqli = dbConnect($DBUSER, $DBPASS, $DBNAME);
-    if (!$mysqli) {
-        $registrationMessage = '<div class="error">Database connection failed</div>';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
+    $username = cleanInput($_POST['reg_username']);
+    $password = cleanInput($_POST['reg_password']);
+    $confirmPassword = cleanInput($_POST['confirm_password']);
+    $firstname = cleanInput($_POST['first_name']);
+    $lastname = cleanInput($_POST['last_name']);
+    $college = cleanInput($_POST['college']);
+
+    if (empty($username) || empty($password) || empty($confirmPassword) || empty($firstname) || empty($lastname) || empty($college)) {
+        $registerMessage = "All fields are required!";
+    } elseif ($password !== $confirmPassword) {
+        $registerMessage = "Passwords do not match!";
     } else {
-        $username = cleanInput($_POST['username']);
-        $password = cleanInput($_POST['password']);
-        $firstname = cleanInput($_POST['firstname']);
-        $lastname = cleanInput($_POST['lastname']);
-        $college = cleanInput($_POST['college']);
-
-        // Validasi input
-        if (empty($username) || empty($password) || empty($firstname) || empty($lastname) || empty($college)) {
-            $registrationMessage = '<div class="error">All fields are required</div>';
-        } elseif (strlen($username) < 2) {
-            $registrationMessage = '<div class="error">Username must be at least 2 characters long</div>';
+        $result = handleRegister($username, $password, $firstname, $lastname, $college, $DBUSER, $DBPASS, $DBNAME);
+        if (isset($result['error'])) {
+            $registerMessage = $result['error'];
         } else {
-            // Cek apakah username sudah ada
-            $checkQuery = "SELECT id FROM users WHERE username = ?";
-            $checkStmt = $mysqli->prepare($checkQuery);
-            $checkStmt->bind_param("s", $username);
-            $checkStmt->execute();
-            $checkStmt->store_result();
-
-            if ($checkStmt->num_rows > 0) {
-                $registrationMessage = '<div class="error">Username already taken</div>';
-            } else {
-                // Hash password sebelum disimpan
-                $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
-
-                // Query untuk menyimpan user baru
-                $query = "INSERT INTO users (username, password, firstname, lastname, college, is_admin) VALUES (?, ?, ?, ?, ?, 0)";
-                $stmt = $mysqli->prepare($query);
-                if ($stmt) {
-                    $stmt->bind_param("sssss", $username, $hashedPassword, $firstname, $lastname, $college);
-
-                    if ($stmt->execute()) {
-                        $registrationMessage = '<div class="success">Account created successfully</div>';
-                    } else {
-                        $registrationMessage = '<div class="error">Error creating account</div>';
-                    }
-                    $stmt->close();
-                }
-            }
-            $checkStmt->close();
+            $registerMessage = $result['success'];
+            $registerSuccess = true;
         }
-        $mysqli->close();
     }
 }
-
 ?>
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+
+<!DOCTYPE html>
+<html lang="en">
 <head>
-    <meta name="Keywords" content="programming, contest, coding, judge" />
-    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
-    <meta name="Distribution" content="Global" />
-    <meta name="Robots" content="index,follow" />
-    <link rel="stylesheet" href="images/Envision.css" type="text/css" />
-    <title>Programming Contest - Login</title>
-    <script type="text/javascript" src="jquery-1.3.1.js"></script>
-    <?php include('timer.php'); ?>
-    <style type="text/css">
-        .error { 
-            color: red; 
-            background: #ffebee;
-            padding: 10px;
-            margin: 10px 0;
-            border: 1px solid #ffcdd2;
-            border-radius: 4px;
-        }
-        .success { 
-            color: green; 
-            background: #e8f5e9;
-            padding: 10px;
-            margin: 10px 0;
-            border: 1px solid #a5d6a7;
-            border-radius: 4px;
-        }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - UMN Programming Club</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
+<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen">
+    <div class="w-full max-w-md bg-gray-800 p-6 rounded-lg shadow-md">
+        <img src="images/UMNPC.png" class="h-56 justify-items-center mx-auto" alt="UMNPC Logo">
 
-<body class="menu1">
-<div id="wrap">
-    <?php include('Layout/header.php'); ?>
-    <?php include('Layout/menu.php'); ?>
-    
-    <div id="content-wrap">
-        <div id="main">
-            <?php 
-            if($loginError) {
-                echo '<div id="error" class="error">' . htmlspecialchars($loginError) . '</div>';
-            }
-            if($registrationMessage) {
-                echo $registrationMessage;
-            }
-            ?>
-            
-            <form style="position: relative; margin-left: auto; margin-right: auto; width: 250px; background-color: #ECF1EF;" action="login.php" method="post">
-                <p>
-                <label>Username</label>
-                <input name="username" value="<?php echo isset($_POST['username']) ? htmlspecialchars($_POST['username']) : ''; ?>" type="text" size="30" />
-                
-                <label>Password</label>
-                <input name="password" value="" type="password" size="30" />
-
-                <div id="registerfields" style="display: none">
-                    <label>Confirm Password</label>
-                    <input name="confirm" value="" type="password" size="30" />
-                    
-                    <label>First Name</label>
-                    <input name="firstname" value="<?php echo isset($_POST['firstname']) ? htmlspecialchars($_POST['firstname']) : ''; ?>" type="text" size="30" />
-                    
-                    <label>Last Name</label>
-                    <input name="lastname" value="<?php echo isset($_POST['lastname']) ? htmlspecialchars($_POST['lastname']) : ''; ?>" type="text" size="30" />
-                    
-                    <label>College</label>
-                    <input name="college" value="<?php echo isset($_POST['college']) ? htmlspecialchars($_POST['college']) : ''; ?>" type="text" size="30" />
+        <div id="loginSection">
+            <h2 class="text-center text-xl font-bold mb-4">Login</h2>
+            <?php if($loginError): ?>
+                <div class="bg-red-500 text-white p-3 rounded text-center mb-4"> 
+                    <?= htmlspecialchars($loginError); ?>
                 </div>
+            <?php endif; ?>
 
-                <div style="text-align: center; margin: 10px 0;">
-                    <input id="loginbutton" class="button" type="submit" name="login" value="Login" />
-                </div>
-                </p>
+            <form method="post">
+                <input type="text" name="username" placeholder="Username" class="w-full p-2 mb-2 rounded bg-gray-700">
+                <input type="password" name="password" placeholder="Password" class="w-full p-2 mb-2 rounded bg-gray-700">
+                <button type="submit" name="login" class="w-full bg-purple-600 py-2 rounded">Login</button>
             </form>
-
-            <div style="text-align: center; margin: 10px 0;">
-                <a id="register" style="cursor: pointer;">Create an account</a>
-            </div>
+            <p class="text-center mt-4">
+                <a id="showRegister" class="text-purple-400 hover:underline cursor-pointer">Create an account</a>
+            </p>
         </div>
 
-        <div id="sidebar">
-            <h3 id="timeheading"></h3>
-            <ul class="sidemenu">
-                <li id="time"></li>
-            </ul>
+        <div id="registerSection" style="display: none;">
+            <h2 class="text-center text-xl font-bold mb-4">Register</h2>
+            <?php if($registerMessage): ?>
+                <div class="<?= $registerSuccess ? 'bg-green-500' : 'bg-red-500'; ?> text-white p-3 rounded text-center mb-4">
+                    <?= htmlspecialchars($registerMessage); ?>
+                </div>
+                <?php if($registerSuccess): ?>
+                    <script>
+                        setTimeout(() => {
+                            document.getElementById('showLogin').click();
+                        }, 3000);
+                    </script>
+                <?php endif; ?>
+            <?php endif; ?>
+
+            <form method="post">
+                <input type="text" name="first_name" placeholder="First Name" class="w-full p-2 mb-2 rounded bg-gray-700">
+                <input type="text" name="last_name" placeholder="Last Name" class="w-full p-2 mb-2 rounded bg-gray-700">
+                <input type="text" name="reg_username" placeholder="Username" class="w-full p-2 mb-2 rounded bg-gray-700">
+                <input type="password" name="reg_password" placeholder="Password" class="w-full p-2 mb-2 rounded bg-gray-700">
+                <input type="password" name="confirm_password" placeholder="Confirm Password" class="w-full p-2 mb-2 rounded bg-gray-700">
+                <input type="text" name="college" placeholder="College" class="w-full p-2 mb-2 rounded bg-gray-700">
+                <button type="submit" name="register" class="w-full bg-green-600 py-2 rounded">Register</button>
+            </form>
+            <p class="text-center mt-4">
+                <a id="showLogin" class="text-purple-400 hover:underline cursor-pointer">Back to Login</a>
+            </p>
         </div>
     </div>
-    
-    <div id="footer">
-        <?php include('Layout/footer.php'); ?>
-    </div>
-</div>
 
-<script type="text/javascript">
-$(document).ready(function(){ 
-    if (typeof dispTime === "function") {
-        setInterval("dispTime()", 1000); 
-        dispTime(); 
-    }
-
-    $('#register').click(function() {
-        var $registerFields = $('#registerfields');
-        var $loginButton = $('#loginbutton');
-        var $register = $('#register');
-        
-        if($registerFields.is(':hidden')) {
-            $registerFields.slideDown('fast');
-            $register.text('Cancel');
-            $loginButton.val('Register');
-            $loginButton.attr('name', 'register');
-        } else {
-            $registerFields.slideUp('fast');
-            $register.text('Create an account');
-            $loginButton.val('Login');
-            $loginButton.attr('name', 'login');
-        }
-        $('#error').hide();
-    });
-
-    $('form').submit(function(e) {
-        var $error = $('#error');
-        var username = $("input[name='username']").val();
-        var password = $("input[name='password']").val();
-        
-        $error.hide();
-
-        if(!username) {
-            $error.text('Username field cannot be left blank').attr('class', 'error').fadeIn('slow');
-            e.preventDefault();
-            return false;
-        }
-        if(!password) {
-            $error.text('Password field cannot be left blank').attr('class', 'error').fadeIn('slow');
-            e.preventDefault();
-            return false;
-        }
-
-        if($('#loginbutton').attr('name') === 'register') {
-            var confirmpass = $("input[name='confirm']").val();
-            var firstname = $("input[name='firstname']").val();
-            var lastname = $("input[name='lastname']").val();
-            var college = $("input[name='college']").val();
-            
-            if(password !== confirmpass) {
-                $error.text('Passwords entered do not match').attr('class', 'error').fadeIn('slow');
-                e.preventDefault();
-                return false;
-            }
-            if(!firstname) {
-                $error.text('First name missing').attr('class', 'error').fadeIn('slow');
-                e.preventDefault();
-                return false;
-            }
-            if(!lastname) {
-                $error.text('Last name missing').attr('class', 'error').fadeIn('slow');
-                e.preventDefault();
-                return false;
-            }
-            if(!college) {
-                $error.text('College name missing').attr('class', 'error').fadeIn('slow');
-                e.preventDefault();
-                return false;
-            }
-        }
-    });
-});
-</script>
-
+    <script>
+        document.getElementById('showRegister').onclick = () => {
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('registerSection').style.display = 'block';
+        };
+        document.getElementById('showLogin').onclick = () => {
+            document.getElementById('registerSection').style.display = 'none';
+            document.getElementById('loginSection').style.display = 'block';
+        };
+    </script>
 </body>
 </html>
