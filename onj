@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-import sys, signal, os, subprocess, logging
+import sys, signal, os, subprocess, logging, json
 from pathlib import Path
 import time
 
@@ -99,7 +99,7 @@ def compile_code(sourcefile, ext):
         return False, None
 
 def run_solution(executable_path, infile, outfile, sourcefile=None):
-    """Run the compiled solution"""
+    """Run the solution and capture both the result and actual output"""
     try:
         debug(f"Starting solution execution with executable: {executable_path}")
         start_time = time.time()
@@ -107,12 +107,16 @@ def run_solution(executable_path, infile, outfile, sourcefile=None):
         # Verify input file exists and is readable
         if not os.path.isfile(infile):
             debug(f"Input file not found: {infile}")
-            return False, 0
+            return False, 0, None
         
         # Get work directory
         work_dir = os.path.dirname(executable_path) if executable_path else os.getcwd()
         
-        with open(infile, 'r') as fin, open(outfile, 'w') as fout:
+        # Read input content
+        with open(infile, 'r') as f:
+            input_content = f.read()
+        
+        with open(outfile, 'w') as fout:
             # Determine command based on file type
             if sourcefile and sourcefile.endswith('.py'):
                 cmd = ["python3", sourcefile]
@@ -123,11 +127,11 @@ def run_solution(executable_path, infile, outfile, sourcefile=None):
                 cmd = [executable_path]
             else:
                 debug("No valid command could be determined")
-                return False, 0
+                return False, 0, None
                 
             process = subprocess.run(
                 cmd,
-                stdin=fin,
+                input=input_content,
                 stdout=fout,
                 stderr=subprocess.PIPE,
                 timeout=TIME_LIMIT,
@@ -140,67 +144,105 @@ def run_solution(executable_path, infile, outfile, sourcefile=None):
         
         if process.returncode != 0:
             debug(f"Runtime error: {process.stderr}")
-            return False, execution_time
+            return False, execution_time, None
+        
+        # Read the actual output
+        with open(outfile, 'r') as f:
+            actual_output = f.read()
             
-        return True, execution_time
+        return True, execution_time, actual_output
         
     except subprocess.TimeoutExpired:
         debug("Time limit exceeded")
-        return False, TIME_LIMIT
+        return False, TIME_LIMIT, None
     except Exception as e:
         debug(f"Runtime error: {str(e)}")
-        return False, 0
+        return False, 0, None
 
-def compare_output(output_file, expected_file):
-    """Compare output with expected result"""
+def compare_output(output_file, expected_file, input_file):
+    """Compare output with expected result and return first mismatch details with corresponding input"""
     try:
         debug("Comparing output files")
         if not os.path.exists(output_file):
             debug(f"Output file not found: {output_file}")
-            return False
+            return False, None
         if not os.path.exists(expected_file):
             debug(f"Expected output file not found: {expected_file}")
-            return False
+            return False, None
+            
+        # Read and parse input file into test cases
+        with open(input_file, 'r') as f:
+            input_lines = f.readlines()
+            
+        # Parse input into test cases
+        test_cases = []
+        i = 0
+        num_cases = int(input_lines[i].strip())
+        i += 1
+        
+        while i < len(input_lines):
+            n, target = map(int, input_lines[i].strip().split())
+            i += 1
+            numbers = input_lines[i].strip()
+            i += 1
+            test_cases.append(f"{n} {target}\n{numbers}")
             
         with open(output_file, 'r') as f1, open(expected_file, 'r') as f2:
-            # Read all lines and store them
-            output_lines = f1.readlines()
-            expected_lines = f2.readlines()
+            actual_lines = [line.strip() for line in f1.readlines()]
+            expected_lines = [line.strip() for line in f2.readlines()]
             
-            debug(f"Number of lines in output: {len(output_lines)}")
-            debug(f"Number of lines in expected: {len(expected_lines)}")
+            # Find the first mismatch
+            mismatch_index = -1
+            is_correct = True
             
-            # Strip whitespace and filter empty lines
-            output = [line.strip() for line in output_lines if line.strip()]
-            expected = [line.strip() for line in expected_lines if line.strip()]
+            # First ensure both have same number of non-empty lines
+            actual_lines = [line for line in actual_lines if line]
+            expected_lines = [line for line in expected_lines if line]
             
-            debug("Processed output:")
-            for i, line in enumerate(output):
-                debug(f"Output line {i+1}: '{line}'")
+            if len(actual_lines) != len(expected_lines):
+                is_correct = False
+                # If actual output has fewer lines, that's our mismatch point
+                mismatch_index = min(len(actual_lines), len(expected_lines))
+            else:
+                # Find first line that doesn't match
+                for i, (actual, expected) in enumerate(zip(actual_lines, expected_lines)):
+                    if actual != expected:
+                        is_correct = False
+                        mismatch_index = i
+                        break
             
-            debug("Expected output:")
-            for i, line in enumerate(expected):
-                debug(f"Expected line {i+1}: '{line}'")
-            
-            if output != expected:
-                debug("Output mismatch detected!")
-                # Show detailed comparison
-                if len(output) != len(expected):
-                    debug(f"Line count mismatch: output has {len(output)} lines, expected has {len(expected)} lines")
-                else:
-                    for i, (out_line, exp_line) in enumerate(zip(output, expected)):
-                        if out_line != exp_line:
-                            debug(f"Mismatch at line {i+1}:")
-                            debug(f"Expected: '{exp_line}'")
-                            debug(f"Got: '{out_line}'")
-                return False
+            # Prepare the comparison result
+            if not is_correct and mismatch_index != -1:
+                # For mismatched output, only include the first mismatched test case
+                actual_output = actual_lines[mismatch_index] if mismatch_index < len(actual_lines) else "Missing output"
+                expected_output = expected_lines[mismatch_index] if mismatch_index < len(expected_lines) else "Missing output"
                 
-            debug("Output matches expected result!")
-            return True
+                # Get corresponding input for this test case
+                case_number = mismatch_index  # Since each line is a test case result
+                corresponding_input = test_cases[case_number] if case_number < len(test_cases) else "Input not available"
+                
+                comparison_result = {
+                    'input': corresponding_input,
+                    'expected': expected_output,
+                    'actual': actual_output,
+                    'is_correct': False,
+                    'mismatch_line': mismatch_index + 1  # 1-based line number for human readability
+                }
+            else:
+                # If everything matches, include last test case
+                comparison_result = {
+                    'input': test_cases[-1] if test_cases else "",
+                    'expected': expected_lines[-1] if expected_lines else "",
+                    'actual': actual_lines[-1] if actual_lines else "",
+                    'is_correct': True
+                }
+            
+            debug(f"Comparison result: {comparison_result}")
+            return is_correct, comparison_result
             
     except Exception as e:
         debug(f"Error comparing files: {str(e)}")
-        return False
+        return False, None
 
 def main():
     executable_path = None
@@ -243,22 +285,43 @@ def main():
         output_file = os.path.join(work_dir, "output.txt")
         
         # Run solution
-        success, execution_time = run_solution(executable_path, infile, output_file, sourcefile)
+        success, execution_time, actual_output = run_solution(executable_path, infile, output_file, sourcefile)
+        
         if not success:
             if execution_time >= TIME_LIMIT:
+                print(json.dumps({
+                    'status': 'error',
+                    'verdict': 'Time Limit Exceeded',
+                    'execution_time': execution_time
+                }))
                 sys.exit(VERDICT['TIME_EXCEEDED'])
+            print(json.dumps({
+                'status': 'error',
+                'verdict': 'Runtime Error',
+                'execution_time': execution_time
+            }))
             sys.exit(VERDICT['RTE'])
 
-        # Compare output
-        if compare_output(output_file, expected_file):
-            print(f"{execution_time:.3f}")  # Print execution time
+        # Compare output and get details with input file
+        is_correct, comparison_result = compare_output(output_file, expected_file, infile)
+        
+        comparison_result['execution_time'] = execution_time
+        
+        # Print result as JSON
+        print(json.dumps(comparison_result))
+        
+        if is_correct:
             sys.exit(VERDICT['CORRECT'])
         else:
-            print(f"{execution_time:.3f}")  # Print execution time
             sys.exit(VERDICT['WRONG'])
 
     except Exception as e:
         debug(f"Unexpected error: {str(e)}")
+        print(json.dumps({
+            'status': 'error',
+            'message': str(e),
+            'verdict': 'Runtime Error'
+        }))
         sys.exit(VERDICT['RTE'])
     finally:
         # Cleanup
