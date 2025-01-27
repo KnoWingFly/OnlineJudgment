@@ -1,4 +1,10 @@
 <?php
+// Start by clearing any output and setting error handling
+error_reporting(E_ALL);
+ini_set('display_errors', 0);
+ob_clean();
+header('Content-Type: application/json');
+
 session_start();
 if (!isset($_SESSION['isloggedin'])) {
     header("Location: login.php");
@@ -14,6 +20,16 @@ include('settings.php');
 ini_set('log_errors', 1);
 ini_set('error_log', __DIR__ . '/php_errors.log');
 error_log("Starting submission processing");
+
+// Constants for verdicts (should match the ones in onj)
+define('VERDICT', [
+    'CORRECT' => 0,
+    'COMPILE_ERROR' => 1,
+    'WRONG' => 2,
+    'TIME_EXCEEDED' => 3,
+    'ILLEGAL_FILE' => 4,
+    'RTE' => 5
+]);
 
 function convertToWSLPath($windowsPath)
 {
@@ -119,8 +135,11 @@ try {
     }
 
     if (preventDuplicateSubmission($db, $userid, $problemid)) {
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
         echo json_encode([
-            'verdict' => 5,
+            'verdict' => VERDICT['RTE'],
             'problemid' => $problemid,
             'message' => 'Please wait 5 seconds between submissions'
         ]);
@@ -212,57 +231,32 @@ try {
         // Execute the shell script through WSL
         $cmd = "wsl bash " . escapeshellarg($wslScriptPath);
 
-        // Execute command
+        // Execute command and capture output
         $output = [];
         $returncode = -1;
         exec($cmd, $output, $returncode);
 
-        // Clean up the temporary script
-        unlink($scriptPath);
-
-        // Get execution time
+        // Initialize variables
+        $judgeOutput = null;
         $executionTime = 0.0;
+
+        // Process the judge output
         if (!empty($output)) {
-            foreach ($output as $line) {
-                if (is_numeric($line)) {
-                    $executionTime = number_format((float) $line, 3, '.', '');
-                    break;
+            $lastOutput = end($output);
+            // Try to parse the JSON output from the judge
+            $decodedOutput = json_decode($lastOutput, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                $judgeOutput = $decodedOutput;
+                if (isset($judgeOutput['execution_time'])) {
+                    $executionTime = number_format((float) $judgeOutput['execution_time'], 3, '.', '');
                 }
             }
         }
 
-        // Check if correct and update score
-        $scoreUpdated = false;
-        $newScore = 0;
-        $newRank = 0;
+        // Clean up the temporary script
+        unlink($scriptPath);
 
-        if ($returncode === 0) {
-            $timeLimit = 1.0;  // Default 1 second time limit
-            if ($executionTime <= $timeLimit) {
-                $scoreUpdated = updateScoreAndRank($db, $userid, $problemid);
-
-                // Get updated score and rank
-                $stmt = $db->prepare("SELECT score, ranks FROM users WHERE id = ?");
-                $stmt->bind_param("i", $userid);
-                $stmt->execute();
-                $result = $stmt->get_result();
-                $userInfo = $result->fetch_assoc();
-                $newScore = $userInfo['score'];
-                $newRank = $userInfo['ranks'];
-            }
-        }
-
-        // Verdict messages
-        $verdictMessages = [
-            0 => "Accepted",
-            1 => "Compile Error",
-            2 => "Wrong Answer",
-            3 => "Time Limit Exceeded",
-            4 => "Invalid File",
-            5 => "Runtime Error",
-            6 => "System Error"
-        ];
-
+        // Get current time
         $currentTime = time();
 
         // Insert submission record
@@ -273,31 +267,72 @@ try {
             throw new Exception("Failed to insert submission: " . $stmt->error);
         }
 
-        // Send response
-        echo json_encode([
+        // Update score if submission is correct
+        $scoreUpdated = false;
+        $newScore = 0;
+        $newRank = 0;
+
+        if ($returncode === VERDICT['CORRECT']) {
+            $scoreUpdated = updateScoreAndRank($db, $userid, $problemid);
+
+            // Get updated score and rank
+            $stmt = $db->prepare("SELECT score, ranks FROM users WHERE id = ?");
+            $stmt->bind_param("i", $userid);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $userInfo = $result->fetch_assoc();
+            $newScore = $userInfo['score'];
+            $newRank = $userInfo['ranks'];
+        }
+
+        // Clean any output buffers before sending response
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
+    
+        // Set headers for JSON response
+        header('Content-Type: application/json');
+        header('Cache-Control: no-cache, must-revalidate');
+        header('Expires: Mon, 26 Jul 1997 05:00:00 GMT');
+    
+        // Prepare and send the response
+        $response = [
             'verdict' => $returncode,
-            'verdict_message' => $verdictMessages[$returncode] ?? "Unknown Error",
             'problemid' => $problemid,
             'execution_time' => $executionTime,
             'time' => $currentTime,
             'readable_time' => date('Y-m-d H:i:s', $currentTime),
             'score_updated' => $scoreUpdated,
             'new_score' => $newScore,
-            'new_rank' => $newRank,
-            'output' => implode("\n", $output)
-        ]);
-
+            'new_rank' => $newRank
+        ];
+    
+        // Include judge output if it exists
+        if ($judgeOutput !== null) {
+            $response['output'] = $judgeOutput;
+        }
+    
+        echo json_encode($response);
         $db->close();
-    } else {
-        throw new Exception("No file uploaded or file upload error");
+        exit;
+    
     }
-} catch (Exception $e) {
-    error_log("Submission Error: " . $e->getMessage());
-    echo json_encode([
-        'verdict' => 6,
-        'verdict_message' => "System Error",
-        'problemid' => isset($problemid) ? $problemid : -1,
-        'message' => 'System error occurred: ' . $e->getMessage()
-    ]);
-}
+ } catch (Exception $e) {
+        // Clean output buffers
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
+    
+        // Log the error
+        error_log("Submission Error: " . $e->getMessage());
+    
+        // Send error response as JSON
+        header('Content-Type: application/json');
+        echo json_encode([
+            'verdict' => VERDICT['RTE'],
+            'problemid' => isset($problemid) ? $problemid : -1,
+            'message' => 'System error occurred: ' . $e->getMessage()
+        ]);
+        exit;
+    }
 ?>

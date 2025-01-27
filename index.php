@@ -26,7 +26,7 @@ $host = 'localhost';
 try {
     // Create a PDO connection
     $pdo = new PDO("mysql:host=$host;dbname=$DBNAME;charset=utf8", $DBUSER, $DBPASS);
-    
+
     // Set the PDO error mode to exception
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
@@ -153,186 +153,179 @@ if (isset($_GET['mode']) && $_GET['mode'] == 'getFullDetails') {
 
     <title>Programming Contest - Problem <?php echo $problemid; ?></title>
 
-    <script type="text/javascript" src="jquery-1.3.1.js"></script>
-    <script type="text/javascript" src="jquery.form.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.form/4.3.0/jquery.form.min.js"
+        integrity="sha384-qlmct0AOBiA2VPZkMY3+2WqkHtIQ9lSdAsAn5RUJD/3vA5MKDgSGcdmIv4ycVxyn"
+        crossorigin="anonymous"></script>
     <script type="text/javascript" src="jquery.timers-1.1.2.js"></script>
     <?php include('timer.php'); ?>
 
     <script type="text/javascript">
-        var originalStatementHtml = '';
-
         $(document).ready(function () {
-            // Store original statement HTML when page loads
-            originalStatementHtml = $('code.statement').html();
+            $('.uploadform').on('submit', function (e) {
+                e.preventDefault(); // Prevent default form submission behavior
 
-            // Contest-related functions
-            dispTime();
-            getLeaders();
-            getDetails();
+                const formData = new FormData(this);
+                const formAction = $(this).attr('action');
+                const formMethod = $(this).attr('method') || 'POST';
+                const problemid = $(this).data('problemid');
 
-            // Periodic updates
-            setInterval("dispTime()", 1000);
-            setInterval("getLeaders()", getLeaderInterval);
-            setInterval("getDetails()", getLeaderInterval);
+                $.ajax({
+                    url: formAction,
+                    type: formMethod,
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+                    beforeSend: function () {
+                        console.log(`Submission started for Problem ID: ${problemid}`);
+                        $('#submission-result-' + problemid).html('<div class="loading">Processing submission...</div>');
+                    },
+                    success: function (responseText) {
+                        try {
+                            const response = typeof responseText === 'string' ? JSON.parse(responseText) : responseText;
 
-            // Ajax form submission for code uploads
-            $('.uploadform').ajaxForm({
-                dataType: 'json',
-                success: onSucess
-            });
+                            if (!response.problemid) {
+                                console.error('Problem ID is missing from the response.');
+                                $('#submission-result-' + problemid).html('<div class="error">Invalid response from the server.</div>');
+                                return;
+                            }
 
-            // Edit button handler
-            $('#edit').click(onEdit);
-        });
-
-        function onSucess(data) {
-            // Handle different verdicts from code submission
-            var verdictMessages = {
-                0: { class: 'accepted', message: 'Accepted' },
-                1: { class: 'compile', message: 'Compile Error' },
-                2: { class: 'wrong', message: 'Wrong Answer' },
-                3: { class: 'time', message: 'Time Limit Exceeded' },
-                4: { class: 'invalid', message: 'Invalid File' },
-                5: { class: 'RTE', message: 'Runtime Error' }
-            };
-
-            var verdict = verdictMessages[data.verdict] || { class: 'unknown', message: 'Unknown Verdict' };
-
-            $('#status' + data.problemid)
-                .attr('class', verdict.class)
-                .html('<strong>' + verdict.message + '</strong>')
-                .hide()
-                .fadeIn('slow');
-
-            messagebox(verdict.message);
-
-            if (data.verdict === 0) {
-                $('#upload' + data.problemid).hide();
-                getDetails();
-                getLeaders();
-            }
-        }
-
-        function onEdit() {
-            var problem = $('body').attr('id').replace('tab', '');
-
-            // Fetch current problem details for editing
-            $.ajax({
-                url: 'admin/modifyproblem.php',
-                type: 'GET',
-                data: {
-                    problemid: problem,
-                    mode: 'getFullDetails'
-                },
-                dataType: 'json',
-                success: function (data) {
-                    // Create edit form
-                    var editForm = `
-                <div class="problem-edit-form">
-                    <div class="form-group">
-                        <label>Problem Title:</label>
-                        <input type="text" id="edit-title" value="${data.title || ''}" />
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Points:</label>
-                        <input type="number" id="edit-points" min="0" value="${data.points || ''}" />
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Time Limit (seconds):</label>
-                        <input type="number" id="edit-time-limit" step="0.1" value="${data.time_limit || ''}" />
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Problem Description:</label>
-                        <textarea id="edit-description" style="width: 100%; height: 150px;">${data.description || ''}</textarea>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Input Format:</label>
-                        <textarea id="edit-input-format" style="width: 100%; height: 100px;">${data.inputFormat || ''}</textarea>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Output Format:</label>
-                        <textarea id="edit-output-format" style="width: 100%; height: 100px;">${data.outputFormat || ''}</textarea>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Constraints:</label>
-                        <textarea id="edit-constraints" style="width: 100%; height: 100px;">${data.constraints || ''}</textarea>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Sample Input:</label>
-                        <textarea id="edit-sample-input" style="width: 100%; height: 100px;">${data.sampleInput || ''}</textarea>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Sample Output:</label>
-                        <textarea id="edit-sample-output" style="width: 100%; height: 100px;">${data.sampleOutput || ''}</textarea>
-                    </div>
-                    
-                    <div class="form-group">
-                        <button id="save-changes">Save Changes</button>
-                        <button id="cancel-edit">Cancel</button>
-                    </div>
-                </div>
-                `;
-
-                    // Replace the statement panel with the edit form
-                    $('#statementpanel').html(editForm);
-
-                    // Bind save and cancel button events
-                    $('#save-changes').click(function () {
-                        saveChanges(problem);
-                    });
-
-                    $('#cancel-edit').click(function () {
-                        // Revert back to original statement
-                        $('#statementpanel').html('<code class="statement">' + originalStatementHtml + '</code>');
-                    });
-                },
-                error: function () {
-                    alert('Failed to fetch problem details');
-                }
-            });
-        }
-
-        function saveChanges(problemId) {
-            var data = {
-                problemid: problemId,
-                mode: 'updateProblem',
-                title: $('#edit-title').val(),
-                points: $('#edit-points').val(),
-                timeLimit: $('#edit-time-limit').val(),
-                description: $('#edit-description').val(),
-                inputFormat: $('#edit-input-format').val(),
-                outputFormat: $('#edit-output-format').val(),
-                constraints: $('#edit-constraints').val(),
-                sampleInput: $('#edit-sample-input').val(),
-                sampleOutput: $('#edit-sample-output').val()
-            };
-
-            $.ajax({
-                url: 'admin/modifyproblem.php',
-                type: 'POST',
-                data: data,
-                dataType: 'json',
-                success: function (response) {
-                    if (response.success) {
-                        // Refresh the page to show updated content
-                        location.reload();
-                    } else {
-                        alert('Failed to update problem: ' + response.message);
+                            const resultHtml = generateSubmissionResultHtml(response);
+                            $('#submission-result-' + response.problemid).html(resultHtml);
+                        } catch (e) {
+                            console.error('Error parsing response:', e, responseText);
+                            $('#submission-result-' + problemid).html(
+                                `<div class="error">Error processing response: ${e.message}</div>`
+                            );
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        console.error('AJAX error:', error);
+                        $('#submission-result-' + problemid).html(
+                            `<div class="error">Submission failed: ${error}</div>`
+                        );
                     }
-                },
-                error: function () {
-                    alert('Failed to save changes');
-                }
+                });
             });
-        }
+
+            function generateSubmissionResultHtml(response) {
+                let resultHtml = `<div class="submission-result">`;
+
+                // Add verdict and status
+                const verdictClass = response.verdict === 0 ? 'accepted' : 'wrong';
+                const verdictText = getVerdictText(response.verdict);
+                resultHtml += `<div class="verdict ${verdictClass}">${verdictText}</div>`;
+
+                // Check if output exists and add details
+                const output = response.output || {};
+                resultHtml += `
+                <div class="result-section">
+                    <h4>Test Input:</h4>
+                    <pre>${escapeHtml(output.input || 'No input provided')}</pre>
+                </div>
+                <div class="result-section">
+                    <h4>Expected Output:</h4>
+                    <pre>${escapeHtml(output.expected || 'No expected output provided')}</pre>
+                </div>
+                <div class="result-section">
+                    <h4>Your Output:</h4>
+                    <pre>${escapeHtml(output.actual || 'No output provided')}</pre>
+                </div>`;
+
+                // Display execution time
+                resultHtml += `
+                <div class="execution-info">
+                    Execution Time: ${parseFloat(response.execution_time || 0).toFixed(3)} seconds
+                </div>
+            </div>`;
+
+                return resultHtml;
+            }
+
+            function getVerdictText(verdict) {
+                switch (verdict) {
+                    case 0:
+                        return 'Accepted';
+                    case 1:
+                        return 'Compilation Error';
+                    case 2:
+                        return 'Wrong Answer';
+                    case 3:
+                        return 'Time Limit Exceeded';
+                    case 5:
+                        return 'Runtime Error';
+                    default:
+                        return 'Unknown Verdict';
+                }
+            }
+
+            function escapeHtml(unsafe) {
+                if (!unsafe) return '';
+                return unsafe
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            }
+
+            // Example of edit functionality
+            function onEdit() {
+                const problemid = $('body').attr('id').replace('tab', '');
+
+                // Fetch current problem details for editing
+                $.ajax({
+                    url: 'admin/modifyproblem.php',
+                    type: 'GET',
+                    data: {
+                        problemid: problemid,
+                        mode: 'getFullDetails'
+                    },
+                    dataType: 'json',
+                    success: function (data) {
+                        // Generate edit form dynamically
+                        const editForm = `
+                        <div class="problem-edit-form">
+                            <div class="form-group">
+                                <label>Problem Title:</label>
+                                <input type="text" id="edit-title" value="${data.title || ''}" />
+                            </div>
+                            <div class="form-group">
+                                <label>Points:</label>
+                                <input type="number" id="edit-points" min="0" value="${data.points || ''}" />
+                            </div>
+                            <div class="form-group">
+                                <label>Time Limit (seconds):</label>
+                                <input type="number" id="edit-time-limit" step="0.1" value="${data.time_limit || ''}" />
+                            </div>
+                            <div class="form-group">
+                                <label>Problem Description:</label>
+                                <textarea id="edit-description" style="width: 100%; height: 150px;">${data.description || ''}</textarea>
+                            </div>
+                            <div class="form-group">
+                                <button id="save-changes">Save Changes</button>
+                                <button id="cancel-edit">Cancel</button>
+                            </div>
+                        </div>`;
+
+                        // Replace the statement panel with the edit form
+                        $('#statementpanel').html(editForm);
+
+                        // Bind save and cancel actions
+                        $('#save-changes').click(function () {
+                            saveChanges(problemid);
+                        });
+
+                        $('#cancel-edit').click(function () {
+                            $('#statementpanel').html('<code class="statement">' + originalStatementHtml + '</code>');
+                        });
+                    },
+                    error: function () {
+                        alert('Failed to fetch problem details');
+                    }
+                });
+            }
+        });
     </script>
 </head>
 
@@ -362,8 +355,13 @@ if (isset($_GET['mode']) && $_GET['mode'] == 'getFullDetails') {
                     echo "<h2>Problem $problemid: " . htmlspecialchars($problem['title']) . "</h2>";
 
                     if ($running) {
+                        echo '<div id="submission-section">';
                         include('uploadform.php');
+
+                        echo '<div id="submission-result-' . $problemid . '" class="submission-result"></div>';
+                        echo '</div>';
                     }
+
 
                     echo "<p id='statementpanel'><code class='statement'>";
                     $statementFile = "$PROBLEMDIR/$problemid/statement.html";
