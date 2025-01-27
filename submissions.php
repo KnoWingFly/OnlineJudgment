@@ -1,9 +1,4 @@
 <?php
-/*
- * @copyright (c) 2008 Nicolo John Davis
- * @license http://opensource.org/licenses/gpl-license.php GNU Public License
- */
-
 session_start();
 if (!isset($_SESSION['isloggedin'])) {
 	echo "<meta http-equiv='Refresh' content='0; URL=login.php' />";
@@ -16,20 +11,17 @@ if (!isset($_SESSION['isloggedin'])) {
 include('settings.php');
 ?>
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<!DOCTYPE html>
+<html lang="en">
 
 <head>
-	<meta name="Keywords" content="programming, contest, coding, judge" />
-	<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
-	<meta name="Distribution" content="Global" />
-	<meta name="Robots" content="index,follow" />
-	<link rel="stylesheet" href="images/Envision.css" type="text/css" />
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Programming Contest</title>
-	<script type="text/javascript" src="jquery-1.3.1.js"></script>
+	<script src="jquery-1.3.1.js"></script>
 	<?php include('timer.php'); ?>
+	<script src="https://cdn.tailwindcss.com"></script>
 
-	<!-- Updated modal styles -->
 	<style>
 		.modal {
 			display: none;
@@ -54,139 +46,70 @@ include('settings.php');
 			}
 		}
 
-		.modal-content {
-			background-color: #fefefe;
-			margin: 5% auto;
-			padding: 20px;
-			border: 1px solid #888;
-			width: 80%;
-			max-width: 800px;
-			border-radius: 8px;
-			box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-			position: relative;
-			max-height: 80vh;
-			display: flex;
-			flex-direction: column;
+		.fade-in {
+			animation: fadeIn 0.5s ease-in;
 		}
 
-		.modal-header {
-			display: flex;
-			justify-content: space-between;
-			align-items: center;
-			padding-bottom: 10px;
-			border-bottom: 1px solid #ddd;
-			margin-bottom: 15px;
-		}
-
-		.modal-title {
-			font-size: 1.25rem;
-			font-weight: bold;
-			margin: 0;
-		}
-
-		.close {
-			position: absolute;
-			right: 20px;
-			top: 15px;
-			color: #666;
-			font-size: 24px;
-			font-weight: bold;
+		/* Add cursor pointer to close button */
+		.close-btn {
 			cursor: pointer;
-			background: none;
-			border: none;
-			padding: 0;
-			width: 30px;
-			height: 30px;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			border-radius: 50%;
-			transition: all 0.2s ease;
-		}
-
-		.close:hover {
-			background-color: #f0f0f0;
-			color: #333;
-		}
-
-		.modal-body {
-			flex: 1;
-			overflow-y: auto;
-			padding: 10px 0;
-		}
-
-		pre {
-			background-color: #f8f8f8;
-			padding: 15px;
-			border-radius: 6px;
-			border: 1px solid #ddd;
-			overflow-x: auto;
-			font-family: monospace;
-			font-size: 14px;
-			line-height: 1.4;
-			margin: 0;
-		}
-
-		/* Style for the View Code button */
-		.view-code-btn {
-			background-color: #4CAF50;
-			color: white;
-			border: none;
-			padding: 6px 12px;
+			padding: 8px;
 			border-radius: 4px;
-			cursor: pointer;
-			font-size: 14px;
 			transition: background-color 0.2s;
 		}
 
-		.view-code-btn:hover {
-			background-color: #45a049;
+		.close-btn:hover {
+			background-color: rgba(255, 255, 255, 0.1);
 		}
 	</style>
 
-	<script type="text/javascript">
+	<script>
+		function getSubmissions() {
+			$.ajax({
+				url: 'getsubmissions.php',
+				success: function (data) {
+					$('#submissions').html(data);
+				}
+			});
+		}
+
 		$(document).ready(function () {
 			dispTime();
-			getLeaders();
-			getDetails();
 			getSubmissions();
-			setInterval("dispTime()", 1000);
-			setInterval("getLeaders()", getLeaderInterval);
-			setInterval("getDetails()", getLeaderInterval);
-			setInterval("getSubmissions()", getLeaderInterval);
+			setInterval(dispTime, 1000);
+			setInterval(getSubmissions, 5000);
 
-			$('.close').live('click', function () {
+			// Modal handling with `.live()` for compatibility
+			$('.close-modal').live('click', function () {
 				closeModal();
 			});
 
-			$('#codeModal').live('click', function (event) {
-				if (event.target.id === 'codeModal') {
+			// Close modal when clicking outside the modal content
+			$('#codeModal').click(function (event) {
+				if ($(event.target).is('#codeModal')) {
 					closeModal();
 				}
 			});
 
-			$('.modal-content').live('click', function (event) {
-				event.stopPropagation();
-			});
-
-			$(document).live('keydown', function (event) {
-				if (event.key === "Escape") {
+			// Close modal on escape key
+			$(document).keyup(function (event) {
+				if (event.keyCode === 27) { // Escape key
 					closeModal();
 				}
 			});
 		});
 
-		// Function to open the modal
 		function openModal(content) {
-			$('#submissionCode').html(content); 
-			$('#codeModal').show(); 
+			$('#submissionCode').html(content);
+			$('#codeModal').fadeIn(300);
 		}
 
-		// Function to close the modal
 		function closeModal() {
-			$('#codeModal').hide(); 
-			$('#submissionCode').html(''); 
+			$('#codeModal').fadeOut(300, function () {
+				$('#submissionCode').html('');
+			});
 		}
+
 
 		function viewCode(submissionId) {
 			$.ajax({
@@ -197,7 +120,7 @@ include('settings.php');
 					try {
 						var data = JSON.parse(response);
 						if (data.success) {
-							openModal(data.code); 
+							openModal(data.code);
 						} else {
 							alert('Error: ' + data.message);
 						}
@@ -213,46 +136,37 @@ include('settings.php');
 			});
 		}
 	</script>
-
-
 </head>
 
-<body class="menu3">
-	<!-- wrap starts here -->
-	<div id="wrap">
-		<!--header -->
+<body class="bg-black text-white">
+	<div class="min-h-screen">
 		<?php include('Layout/header.php'); ?>
-		<!-- menu -->
 		<?php include('Layout/menu.php'); ?>
-		<!-- content-wrap starts here -->
-		<div id="content-wrap">
-			<div id="main">
-				<table id="submissions"> </table>
-			</div>
-			<div id="sidebar">
-				<?php include('sidebar.php'); ?>
-			</div>
-			<!-- content-wrap ends here -->
-		</div>
-		<!--footer starts here-->
-		<div id="footer">
-			<?php include('Layout/footer.php'); ?>
-		</div>
-	</div>
-	<!-- wrap ends here -->
 
-	<!-- Improved modal structure -->
-	<div id="codeModal" class="modal">
-		<div class="modal-content">
-			<div class="modal-header">
-				<h3 class="modal-title">Submission Code</h3>
-				<button type="button" class="close">&times;</button>
-			</div>
-			<div class="modal-body">
-				<pre id="submissionCode"></pre>
+		<div class="container mx-auto px-4 py-8">
+			<h1 class="text-2xl font-semibold text-center mb-8">User</h1>
+
+			<div class="w-full overflow-x-auto shadow-lg rounded-lg">
+				<table id="submissions" class="w-full min-w-full fade-in">
+					<!-- Content will be loaded by AJAX -->
+				</table>
 			</div>
 		</div>
 	</div>
+
+	<!-- Modal -->
+	<div id="codeModal" class="modal">
+		<div class="modal-content bg-black mx-auto my-8 p-6 rounded-lg max-w-4xl w-11/12 border border-gray-800">
+			<div class="flex justify-between items-center mb-4">
+				<h3 class="text-xl font-semibold text-white">Submission Code</h3>
+				<button class="close-modal close-btn text-gray-400 hover:text-white text-2xl font-bold">&times;</button>
+			</div>
+			<div class="overflow-x-auto">
+				<pre id="submissionCode" class="bg-opacity-10 bg-white p-4 rounded text-sm text-white"></pre>
+			</div>
+		</div>
+	</div>
+
 </body>
 
 </html>

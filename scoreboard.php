@@ -5,13 +5,10 @@
 */
 
 session_start();
-if(!isset($_SESSION['isloggedin']))
-{
+if(!isset($_SESSION['isloggedin'])) {
     echo "<meta http-equiv='Refresh' content='0; URL=login.php' />";
     exit(0);
-}
-else
-{
+} else {
     $username = $_SESSION['username'];
     $userid = $_SESSION['userid'];
 }
@@ -19,23 +16,33 @@ else
 include('settings.php');
 ?>
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-    <meta name="Keywords" content="programming, contest, coding, judge" />
-    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
-    <meta name="Distribution" content="Global" />
-    <meta name="Robots" content="index,follow" />
-
-    <link rel="stylesheet" href="images/Envision.css" type="text/css" />
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Programming Contest - Scoreboard</title>
+    
+    <!-- Include Tailwind CSS from CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Custom styles -->
+    <style>
+        /* Any additional custom styles if needed */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
 
-    <script type="text/javascript" src="jquery-1.3.1.js"></script>
+    <script src="jquery-1.3.1.js"></script>
     <?php include('timer.php'); ?>
-    <script type="text/javascript">
-    <!--
+    
+    <script>
     function getScores() {
         $.ajax({
             url: 'getscores.php',
@@ -54,52 +61,33 @@ include('settings.php');
         getLeaders();
         getDetails();
         setInterval("dispTime()", 1000);  
-        setInterval("getScores()", getLeaderInterval);  
-        setInterval("getLeaders()", getLeaderInterval);  
-        setInterval("getDetails()", getLeaderInterval);  
+        setInterval("getScores()", <?php echo $getLeaderInterval; ?>);  
+        setInterval("getLeaders()", <?php echo $getLeaderInterval; ?>);  
+        setInterval("getDetails()", <?php echo $getLeaderInterval; ?>);  
     });
-    -->
     </script>
 </head>
 
-<body class="menu4">
-    <!-- wrap starts here -->
-    <div id="wrap">
+<body class="bg-black text-white">
+    <div class="min-h-screen">
+        <!-- Header -->
+        <?php include('Layout/header.php'); ?>
         
-        <!--header -->
-        <?php include('Layout/header.php'); ?>    
-
-        <!-- menu -->    
+        <!-- Menu -->
         <?php include('Layout/menu.php'); ?>
-
-        <!-- content-wrap starts here -->
-        <div id="content-wrap">
-            
-            <div id="main">
-                <h2>Scoreboard</h2>
-                <p>Real-time contest standings. Scores are automatically updated every <?php echo $getLeaderInterval/1000; ?> seconds.</p>
-                
-                <div class="table-container">
-                    <table id="scores" class="contest-table">
-                        <!-- This will be populated by getscores.php -->
-                    </table>
-                </div>
-            </div>
-            
-            <div id="sidebar">
-                <?php include('sidebar.php'); ?>    
-            </div>
         
-        <!-- content-wrap ends here -->    
+        <!-- Main Content -->
+        <div class="container mx-auto px-4 py-8">
+            <h1 class="text-2xl font-semibold text-center mb-8">User</h1>
+            
+            <div class="w-full overflow-x-auto shadow-lg rounded-lg">
+                <table id="scores" class="w-full min-w-full fade-in">
+                    <!-- Table content will be loaded by getscores.php -->
+                </table>
+            </div>
         </div>
-                    
-        <!--footer starts here-->
-        <div id="footer">
-            <?php include('Layout/footer.php'); ?>
-        </div>    
-
-    <!-- wrap ends here -->
+        
+        <!-- Footer -->
     </div>
-
 </body>
 </html>
