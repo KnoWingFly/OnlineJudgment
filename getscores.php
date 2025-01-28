@@ -11,7 +11,7 @@ if ($conn->connect_error) {
 
 // Fetch problem points from the database
 $points = array();
-$pointsQuery = "SELECT id, points FROM problems ORDER BY id";
+$pointsQuery = "SELECT id FROM problems ORDER BY id";
 $pointsResult = $conn->query($pointsQuery);
 
 if (!$pointsResult) {
@@ -19,7 +19,7 @@ if (!$pointsResult) {
 }
 
 while($pointRow = $pointsResult->fetch_assoc()) {
-    $points[$pointRow['id'] - 1] = intval($pointRow['points']);
+    $points[$pointRow['id'] - 1] = 1; // Each problem is worth 1 point
 }
 
 $nProb = count($points);
@@ -148,7 +148,7 @@ for($i=0; $i<count($dataSub); $i++) {
                         print "<span class='text-red-500 font-semibold'>CE</span>";
                         break;
                     case 2: // Wrong Answer
-                        print "<span class='text-2xl text-red-500'>—</span>";
+                        print "<span class='text-2xl text-red-500'>X</span>";
                         break;
                     case 3: // Time Limit
                         print "<span class='text-red-500 font-semibold'>TL</span>";

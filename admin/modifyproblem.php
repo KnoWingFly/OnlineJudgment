@@ -36,7 +36,7 @@ if ($mode == 'get') {
 	}
 } else if ($mode == 'getFullDetails') {
 	// Fetch problem details from database
-	$query = "SELECT title, time_limit, points FROM problems WHERE id = ?";
+	$query = "SELECT title, time_limit FROM problems WHERE id = ?";
 	$stmt = mysqli_prepare($cn, $query);
 	mysqli_stmt_bind_param($stmt, "i", $problemid);
 	mysqli_stmt_execute($stmt);
@@ -73,8 +73,6 @@ if ($mode == 'get') {
 						if ($nextElement->tagName == 'p' || $nextElement->tagName == 'pre') {
 							$problem['inputFormat'] .= trim($nextElement->textContent) . "\n";
 						}
-
-						// Stop if we encounter another heading
 						if (
 							$nextElement->tagName == 'font' &&
 							(stripos($nextElement->textContent, 'Output Format') !== false ||
@@ -99,11 +97,9 @@ if ($mode == 'get') {
 						if ($nextElement->tagName == 'p' || $nextElement->tagName == 'pre') {
 							$problem['outputFormat'] .= trim($nextElement->textContent) . "\n";
 						}
-
-						// Stop if we encounter another heading
 						if (
 							$nextElement->tagName == 'font' &&
-							(stripos($nextElement->textContent, 'Constraints') !== false)
+							stripos($nextElement->textContent, 'Constraints') !== false
 						) {
 							break;
 						}
@@ -113,17 +109,15 @@ if ($mode == 'get') {
 			}
 		}
 
-		// Extracting constraints - Improved method
+		// Extracting constraints
 		$problem['constraints'] = '';
 		$constraintsElements = $dom->getElementsByTagName('font');
 		foreach ($constraintsElements as $fontElement) {
 			if (stripos($fontElement->textContent, 'Constraints') !== false) {
 				$nextElement = $fontElement->nextSibling;
 				$constraintsText = '';
-
 				while ($nextElement) {
 					if ($nextElement->nodeType == XML_ELEMENT_NODE) {
-						// Stop if we encounter another heading font
 						if (
 							$nextElement->tagName == 'font' &&
 							(stripos($nextElement->textContent, 'Sample Input') !== false ||
@@ -131,15 +125,12 @@ if ($mode == 'get') {
 						) {
 							break;
 						}
-
-						// Collect text from paragraph or pre elements
 						if ($nextElement->tagName == 'p' || $nextElement->tagName == 'pre') {
 							$constraintsText .= trim($nextElement->textContent) . "\n";
 						}
 					}
 					$nextElement = $nextElement->nextSibling;
 				}
-
 				$problem['constraints'] = trim($constraintsText);
 				break;
 			}
@@ -161,7 +152,6 @@ if ($mode == 'get') {
 } else if ($mode == 'updateProblem') {
 	// Validate and sanitize inputs
 	$title = mysqli_real_escape_string($cn, $_POST['title'] ?? '');
-	$points = intval($_POST['points'] ?? 0);
 	$timeLimit = floatval($_POST['timeLimit'] ?? 0);
 	$description = $_POST['description'] ?? '';
 	$inputFormat = $_POST['inputFormat'] ?? '';
@@ -170,62 +160,39 @@ if ($mode == 'get') {
 	$sampleInput = $_POST['sampleInput'] ?? '';
 	$sampleOutput = $_POST['sampleOutput'] ?? '';
 
+	// Validate required fields
+	if (empty($title) || empty($timeLimit)) {
+		echo json_encode(['success' => false, 'message' => 'Title and time limit are required']);
+		exit;
+	}
+
 	// Begin transaction
 	mysqli_begin_transaction($cn);
 
 	try {
 		// Update problem details in database
-		$query = "UPDATE problems SET title = ?, points = ?, time_limit = ? WHERE id = ?";
+		$query = "UPDATE problems SET title = ?, time_limit = ? WHERE id = ?";
 		$stmt = mysqli_prepare($cn, $query);
-		mysqli_stmt_bind_param($stmt, "sdis", $title, $points, $timeLimit, $problemid);
+
+		if (!$stmt) {
+			throw new Exception("Failed to prepare statement: " . mysqli_error($cn));
+		}
+
+		mysqli_stmt_bind_param($stmt, "sdi", $title, $timeLimit, $problemid);
 
 		if (!mysqli_stmt_execute($stmt)) {
-			throw new Exception("Failed to update problem details");
+			throw new Exception("Failed to update problem details: " . mysqli_stmt_error($stmt));
 		}
 
-		// Read existing statement HTML
-		if (!file_exists($statementFile)) {
-			throw new Exception("Statement file not found");
+		// Check if statement file directory exists, create if not
+		if (!file_exists($problemDir)) {
+			if (!mkdir($problemDir, 0777, true)) {
+				throw new Exception("Failed to create problem directory");
+			}
 		}
 
-		// Use the generateStatementHTML function to create new content
-		$newStatementContent = generateStatementHTML(
-			$title,
-			$timeLimit,
-			$inputFormat,
-			$outputFormat,
-			$sampleInput,
-			$sampleOutput,
-			$description,
-			$constraints,
-			$points
-		);
-
-		// Write updated statement HTML
-		if (file_put_contents($statementFile, $newStatementContent) === false) {
-			throw new Exception("Failed to update statement file");
-		}
-
-		// Commit transaction
-		mysqli_commit($cn);
-
-		echo json_encode(['success' => true]);
-	} catch (Exception $e) {
-		// Rollback transaction
-		mysqli_rollback($cn);
-		echo json_encode(['success' => false, 'message' => $e->getMessage()]);
-	}
-} else {
-	echo json_encode(['success' => false, 'message' => 'Invalid mode']);
-}
-
-// Close database connection
-mysqli_close($cn);
-
-// Helper function to generate statement HTML
-function generateStatementHTML($title, $timeLimit, $inputFormat, $outputFormat, $sampleInput, $sampleOutput, $description, $constraints, $points = 0)
-{
-	return <<<EOT
+		// Generate new HTML content
+		$newStatementContent = <<<EOT
 <!DOCTYPE html>
 <html>
 <head>
@@ -235,7 +202,6 @@ function generateStatementHTML($title, $timeLimit, $inputFormat, $outputFormat, 
 <body bgcolor="white">
     <font color="#0000FF"><h1>{$title}</h1></font>
     <h3>Time Limit: {$timeLimit}s</h3>
-    <h3>Points: {$points}</h3>
 
     <p align="justify">{$description}</p>
 
@@ -261,5 +227,20 @@ function generateStatementHTML($title, $timeLimit, $inputFormat, $outputFormat, 
 </body>
 </html>
 EOT;
+
+		// Write updated statement HTML
+		if (file_put_contents($statementFile, $newStatementContent) === false) {
+			throw new Exception("Failed to write statement file");
+		}
+
+		// Commit transaction
+		mysqli_commit($cn);
+
+		echo json_encode(['success' => true]);
+	} catch (Exception $e) {
+		// Rollback transaction
+		mysqli_rollback($cn);
+		echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+	}
 }
 ?>
