@@ -14,13 +14,11 @@ try {
 
     // Update scores by summing points for distinct correctly solved problems
     $updateScores = "
-        UPDATE users u 
+       UPDATE users u 
         SET u.score = (
-            SELECT COALESCE(SUM(p.points), 0)
+            SELECT COUNT(DISTINCT s.problemid)
             FROM submissions s
-            JOIN problems p ON s.problemid = p.id
             WHERE s.userid = u.id AND s.status = 0
-            GROUP BY s.userid
         )";
         
     if (!$db->query($updateScores)) {

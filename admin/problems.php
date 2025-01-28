@@ -68,7 +68,6 @@ function generateStatement($title, $timeLimit, $inputFormat, $outputFormat, $sam
 {
     $imageSection = '';
 
-    // More robust check for image existence
     if ($imagePath) {
         $fullImagePath = "../problems/" . $imagePath;
         if (file_exists($fullImagePath)) {
@@ -216,7 +215,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $required_fields = [
             'title',
             'timeLimit',
-            'points',
             'description',
             'inputFormat',
             'outputFormat',
@@ -244,7 +242,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         $title = mysqli_real_escape_string($cn, $_POST['title']);
         $timeLimit = floatval($_POST['timeLimit']);
-        $points = intval($_POST['points']);
 
         $imagePath = null;
         if (isset($_FILES['problemImage']) && $_FILES['problemImage']['error'] == UPLOAD_ERR_OK) {
@@ -253,14 +250,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
 
         debug_log("Inserting problem into database");
-        $query = "INSERT INTO problems (title, time_limit, points, created_at) 
-             VALUES (?, ?, ?, NOW())";
+        $query = "INSERT INTO problems (title, time_limit, created_at) 
+             VALUES (?, ?, NOW())";
         $stmt = mysqli_prepare($cn, $query);
         if (!$stmt) {
             throw new Exception("Prepare failed: " . mysqli_error($cn));
         }
 
-        mysqli_stmt_bind_param($stmt, "sdi", $title, $timeLimit, $points);
+        mysqli_stmt_bind_param($stmt, "sd", $title, $timeLimit);
 
         if (!mysqli_stmt_execute($stmt)) {
             throw new Exception("Database insert failed: " . mysqli_error($cn));
@@ -415,7 +412,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         .form-group input[type="submit"] {
             padding: 8px 20px;
-            background: #88ac0b color: white;
+            background: #88ac0b;
+            color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
@@ -484,11 +482,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         </div>
 
                         <div class="form-group">
-                            <label>Points:</label>
-                            <input type="number" name="points" required />
-                        </div>
-
-                        <div class="form-group">
                             <label>Problem Description:</label>
                             <textarea name="description" required placeholder="Describe the problem here..."></textarea>
                         </div>
@@ -500,8 +493,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
                         <div class="form-group">
                             <label>Output Format:</label>
-                            <textarea name="outputFormat" required
-                                placeholder="Describe the output format..."></textarea>
+                            <textarea name="outputFormat" required placeholder="Describe the output format..."></textarea>
                         </div>
 
                         <div class="form-group">

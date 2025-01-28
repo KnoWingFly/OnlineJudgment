@@ -270,61 +270,122 @@ if (isset($_GET['mode']) && $_GET['mode'] == 'getFullDetails') {
             }
 
             // Example of edit functionality
-            function onEdit() {
-                const problemid = $('body').attr('id').replace('tab', '');
+            $(document).ready(function () {
+                // Function to handle edit button click
+                function onEdit() {
+                    const problemid = $('body').attr('id').replace('tab', '');
 
-                // Fetch current problem details for editing
-                $.ajax({
-                    url: 'admin/modifyproblem.php',
-                    type: 'GET',
-                    data: {
-                        problemid: problemid,
-                        mode: 'getFullDetails'
-                    },
-                    dataType: 'json',
-                    success: function (data) {
-                        // Generate edit form dynamically
-                        const editForm = `
-                        <div class="problem-edit-form">
-                            <div class="form-group">
-                                <label>Problem Title:</label>
-                                <input type="text" id="edit-title" value="${data.title || ''}" />
-                            </div>
-                            <div class="form-group">
-                                <label>Points:</label>
-                                <input type="number" id="edit-points" min="0" value="${data.points || ''}" />
-                            </div>
-                            <div class="form-group">
-                                <label>Time Limit (seconds):</label>
-                                <input type="number" id="edit-time-limit" step="0.1" value="${data.time_limit || ''}" />
-                            </div>
-                            <div class="form-group">
-                                <label>Problem Description:</label>
-                                <textarea id="edit-description" style="width: 100%; height: 150px;">${data.description || ''}</textarea>
-                            </div>
-                            <div class="form-group">
-                                <button id="save-changes">Save Changes</button>
-                                <button id="cancel-edit">Cancel</button>
-                            </div>
-                        </div>`;
+                    // Fetch current problem details for editing
+                    $.ajax({
+                        url: 'admin/modifyproblem.php',
+                        type: 'GET',
+                        data: {
+                            problemid: problemid,
+                            mode: 'getFullDetails'
+                        },
+                        dataType: 'json',
+                        success: function (data) {
+                            // Generate edit form
+                            const editForm = `
+                    <div class="problem-edit-form">
+                        <div class="form-group">
+                            <label>Problem Title:</label>
+                            <input type="text" id="edit-title" value="${data.title || ''}" />
+                        </div>
+                        <div class="form-group">
+                            <label>Time Limit (seconds):</label>
+                            <input type="number" id="edit-time-limit" step="0.1" value="${data.time_limit || ''}" />
+                        </div>
+                        <div class="form-group">
+                            <label>Problem Description:</label>
+                            <textarea id="edit-description" style="width: 100%; height: 150px;">${data.description || ''}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Input Format:</label>
+                            <textarea id="edit-input-format" style="width: 100%; height: 100px;">${data.inputFormat || ''}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Output Format:</label>
+                            <textarea id="edit-output-format" style="width: 100%; height: 100px;">${data.outputFormat || ''}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Constraints:</label>
+                            <textarea id="edit-constraints" style="width: 100%; height: 100px;">${data.constraints || ''}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Sample Input:</label>
+                            <textarea id="edit-sample-input" style="width: 100%; height: 100px;">${data.sampleInput || ''}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Sample Output:</label>
+                            <textarea id="edit-sample-output" style="width: 100%; height: 100px;">${data.sampleOutput || ''}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <button id="save-changes" class="btn-primary">Save Changes</button>
+                            <button id="cancel-edit" class="btn-secondary">Cancel</button>
+                        </div>
+                    </div>`;
 
-                        // Replace the statement panel with the edit form
-                        $('#statementpanel').html(editForm);
+                            // Store original content
+                            const originalContent = $('#statementpanel').html();
 
-                        // Bind save and cancel actions
-                        $('#save-changes').click(function () {
-                            saveChanges(problemid);
-                        });
+                            // Replace content with edit form
+                            $('#statementpanel').html(editForm);
 
-                        $('#cancel-edit').click(function () {
-                            $('#statementpanel').html('<code class="statement">' + originalStatementHtml + '</code>');
-                        });
-                    },
-                    error: function () {
-                        alert('Failed to fetch problem details');
-                    }
-                });
-            }
+                            // Bind save action
+                            $('#save-changes').click(function () {
+                                const updatedData = {
+                                    mode: 'updateProblem',
+                                    problemid: problemid,
+                                    title: $('#edit-title').val(),
+                                    timeLimit: $('#edit-time-limit').val(),
+                                    description: $('#edit-description').val(),
+                                    inputFormat: $('#edit-input-format').val(),
+                                    outputFormat: $('#edit-output-format').val(),
+                                    constraints: $('#edit-constraints').val(),
+                                    sampleInput: $('#edit-sample-input').val(),
+                                    sampleOutput: $('#edit-sample-output').val()
+                                };
+
+                                $.ajax({
+                                    url: 'admin/modifyproblem.php',
+                                    type: 'POST',
+                                    data: updatedData,
+                                    success: function (response) {
+                                        try {
+                                            const result = typeof response === 'string' ? JSON.parse(response) : response;
+                                            if (result.success) {
+                                                location.reload();
+                                            } else {
+                                                alert('Failed to save changes: ' + (result.message || 'Unknown error'));
+                                            }
+                                        } catch (e) {
+                                            console.error('Error parsing response:', e, response);
+                                            alert('Error processing response from server');
+                                        }
+                                    },
+                                    error: function (xhr, status, error) {
+                                        console.error('AJAX error:', error);
+                                        alert('Failed to save changes: ' + error);
+                                    }
+                                });
+                            });
+
+                            // Bind cancel action
+                            $('#cancel-edit').click(function () {
+                                $('#statementpanel').html(originalContent);
+                            });
+                        },
+                        error: function (xhr, status, error) {
+                            console.error('Error fetching problem details:', error);
+                            alert('Failed to fetch problem details: ' + error);
+                        }
+                    });
+                }
+
+                // Bind edit button click event
+                $('#edit').click(onEdit);
+            });
         });
     </script>
 </head>
