@@ -1,6 +1,7 @@
 settings.php
 setup
 .vscode
-*.log
-judge.log
-php_errors.log
+**/*.log
+node_modules/
+code/
+problems/

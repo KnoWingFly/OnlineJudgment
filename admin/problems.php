@@ -63,7 +63,6 @@ function saveUploadedFile($file, $problemId, $filename, $subdir = '')
     debug_log("File upload successful");
     return true;
 }
-
 function generateStatement($title, $timeLimit, $inputFormat, $outputFormat, $sampleInput, $sampleOutput, $description, $constraints, $imagePath = null)
 {
     $imageSection = '';
@@ -72,50 +71,115 @@ function generateStatement($title, $timeLimit, $inputFormat, $outputFormat, $sam
         $fullImagePath = "../problems/" . $imagePath;
         if (file_exists($fullImagePath)) {
             $imageSection = <<<EOT
-    <font color="#0000FF"><h2>Problem Illustration</h2></font>
-    <div style="text-align: center; margin: 20px 0;">
-        <img src="../problems/{$imagePath}" alt="Problem Illustration" style="max-width: 100%; height: auto;"/>
+<div class="mb-8">
+    <div class="text-blue-400">
+        <h2 class="text-xl font-semibold mb-4 pb-2 border-b border-blue-400/30">Problem Illustration</h2>
     </div>
+    <div class="mt-4">
+        <img src="../problems/{$imagePath}" alt="Problem Illustration" class="rounded-lg border border-[#1A1A1A] mx-auto">
+    </div>
+</div>
 EOT;
         }
     }
 
+    // Process regular text fields
+    $processText = function ($text) {
+        // First escape HTML
+        $text = htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
+        // Replace literal "\r\n" with <br>
+        $text = str_replace("\\r\\n", "<br>", $text);
+        // Replace actual line breaks with <br>
+        $text = str_replace(["\r\n", "\n", "\r"], "<br>", $text);
+        return $text;
+    };
+
+    // Process sample input/output
+    $processSample = function ($text) {
+        // Escape HTML
+        $text = htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
+        // Replace literal "\r\n" with newlines
+        $text = str_replace("\\r\\n", "\n", $text);
+        // Replace actual line breaks with newlines
+        $text = str_replace(["\r\n", "\r"], "\n", $text);
+        return $text;
+    };
+
+    // Apply processing to all fields
+    $title = htmlspecialchars(trim($title), ENT_QUOTES, 'UTF-8');
+    $timeLimit = htmlspecialchars(trim($timeLimit), ENT_QUOTES, 'UTF-8');
+    $description = $processText($description);
+    $inputFormat = $processText($inputFormat);
+    $outputFormat = $processText($outputFormat);
+    $constraints = $processText($constraints);
+    $sampleInput = $processSample($sampleInput);
+    $sampleOutput = $processSample($sampleOutput);
+
     return <<<EOT
-<!DOCTYPE html>
-<html>
-<head>
-    <title>{$title}</title>
-    <meta charset="utf-8">
-</head>
-<body bgcolor="white">
-    <font color="#0000FF"><h1>{$title}</h1></font>
-    <h3>Time Limit: {$timeLimit}s</h3>
+<div class="problem-content space-y-8">
+    <div class="text-blue-400">
+        <h1 class="text-3xl font-bold mb-6">{$title}</h1>
+    </div>
+    
+    <div class="bg-emerald-900/20 text-emerald-400 px-4 py-2 rounded-xl code-font text-sm inline-flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        Time Limit: {$timeLimit}s
+    </div>
 
     {$imageSection}
 
-    <p align="justify">{$description}</p>
+    <div class="space-y-6">
+        <div class="text-blue-400">
+            <h2 class="text-xl font-semibold mb-4 pb-2 border-b border-blue-400/30">Description</h2>
+        </div>
+        <p class="text-gray-300 leading-relaxed">{$description}</p>
+    </div>
 
-    <font color="#0000FF"><h2>Input Format</h2></font>
-    <p align="justify">{$inputFormat}</p>
+    <div class="space-y-6">
+        <div class="text-blue-400">
+            <h2 class="text-xl font-semibold mb-4 pb-2 border-b border-blue-400/30">Input Format</h2>
+        </div>
+        <p class="text-gray-300 leading-relaxed">{$inputFormat}</p>
+    </div>
 
-    <font color="#0000FF"><h2>Output Format</h2></font>
-    <p align="justify">{$outputFormat}</p>
+    <div class="space-y-6">
+        <div class="text-blue-400">
+            <h2 class="text-xl font-semibold mb-4 pb-2 border-b border-blue-400/30">Output Format</h2>
+        </div>
+        <p class="text-gray-300 leading-relaxed">{$outputFormat}</p>
+    </div>
 
-    <font color="#0000FF"><h2>Constraints</h2></font>
-    <p align="justify">{$constraints}</p>
+    <div class="space-y-6">
+        <div class="text-blue-400">
+            <h2 class="text-xl font-semibold mb-4 pb-2 border-b border-blue-400/30">Constraints</h2>
+        </div>
+        <p class="text-gray-300 leading-relaxed">{$constraints}</p>
+    </div>
 
-    <font color="#0000FF"><h2>Sample Input</h2></font>
-    <pre>{$sampleInput}</pre>
+    <div class="space-y-6">
+        <div class="text-blue-400">
+            <h2 class="text-xl font-semibold mb-4 pb-2 border-b border-blue-400/30">Sample Input</h2>
+        </div>
+        <div class="relative">
+            <div class="bg-[#0A0A0A] text-gray-300 p-4 rounded-lg border border-[#1A1A1A] code-font text-sm">
+                <pre class="max-h-64 overflow-y-auto overflow-x-auto whitespace-pre">{$sampleInput}</pre>
+            </div>
+        </div>
+    </div>
 
-    <font color="#0000FF"><h2>Sample Output</h2></font>
-    <pre>{$sampleOutput}</pre>
-
-    <hr>
-    <font size="4">
-    <center>Programming Contest</center>
-    </font>
-</body>
-</html>
+    <div class="space-y-6">
+        <div class="text-blue-400">
+            <h2 class="text-xl font-semibold mb-4 pb-2 border-b border-blue-400/30">Sample Output</h2>
+        </div>
+        <div class="relative">
+            <div class="bg-[#0A0A0A] text-gray-300 p-4 rounded-lg border border-[#1A1A1A] code-font text-sm">
+                <pre class="max-h-64 overflow-y-auto overflow-x-auto whitespace-pre">{$sampleOutput}</pre>
+            </div>
+        </div>
+    </div>
+</div>
 EOT;
 }
 
@@ -493,7 +557,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
                         <div class="form-group">
                             <label>Output Format:</label>
-                            <textarea name="outputFormat" required placeholder="Describe the output format..."></textarea>
+                            <textarea name="outputFormat" required
+                                placeholder="Describe the output format..."></textarea>
                         </div>
 
                         <div class="form-group">
