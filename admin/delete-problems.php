@@ -21,8 +21,52 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
     mysqli_begin_transaction($cn);
 
     try {
-        // Delete problem directory
+        // Get the directory path of the problem to be deleted
         $problemDir = "../problems/" . $problemId;
+
+        // Get all problems with ID greater than the one being deleted
+        $getHigherIds = "SELECT id FROM problems WHERE id > ? ORDER BY id";
+        $stmt = mysqli_prepare($cn, $getHigherIds);
+        mysqli_stmt_bind_param($stmt, "i", $problemId);
+        mysqli_stmt_execute($stmt);
+        $result = mysqli_stmt_get_result($stmt);
+        $higherIds = [];
+        while ($row = mysqli_fetch_assoc($result)) {
+            $higherIds[] = $row['id'];
+        }
+
+        // Delete the problem from database
+        $deleteQuery = "DELETE FROM problems WHERE id = ?";
+        $stmt = mysqli_prepare($cn, $deleteQuery);
+        mysqli_stmt_bind_param($stmt, "i", $problemId);
+        
+        if (!mysqli_stmt_execute($stmt)) {
+            throw new Exception("Failed to delete problem from database");
+        }
+
+        // Update the IDs of remaining problems
+        foreach ($higherIds as $oldId) {
+            $newId = $oldId - 1;
+            
+            // Rename the directory first (from highest to lowest to avoid conflicts)
+            $oldDir = "../problems/" . $oldId;
+            $newDir = "../problems/" . $newId;
+            
+            if (file_exists($oldDir) && !rename($oldDir, $newDir)) {
+                throw new Exception("Failed to rename directory from $oldId to $newId");
+            }
+            
+            // Update the ID in database
+            $updateQuery = "UPDATE problems SET id = ? WHERE id = ?";
+            $stmt = mysqli_prepare($cn, $updateQuery);
+            mysqli_stmt_bind_param($stmt, "ii", $newId, $oldId);
+            
+            if (!mysqli_stmt_execute($stmt)) {
+                throw new Exception("Failed to update problem ID from $oldId to $newId");
+            }
+        }
+
+        // Now delete the original problem directory if it still exists
         if (file_exists($problemDir)) {
             // Recursive directory removal function
             function deleteDirectory($dir) {
@@ -48,18 +92,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
             }
         }
 
-        // Delete problem from database
-        $deleteQuery = "DELETE FROM problems WHERE id = ?";
-        $stmt = mysqli_prepare($cn, $deleteQuery);
-        mysqli_stmt_bind_param($stmt, "i", $problemId);
-        
-        if (!mysqli_stmt_execute($stmt)) {
-            throw new Exception("Failed to delete problem from database");
-        }
-
         // Commit transaction
         mysqli_commit($cn);
-        $message = "Problem deleted successfully";
+        $message = "Problem deleted successfully and IDs reordered";
     } catch (Exception $e) {
         // Rollback transaction
         mysqli_rollback($cn);
@@ -76,7 +111,7 @@ if (!$cn) {
     die("Connection failed: " . mysqli_connect_error());
 }
 
-$query = "SELECT id, title, time_limit, points, created_at FROM problems ORDER BY id";
+$query = "SELECT id, title, time_limit, created_at FROM problems ORDER BY id";
 $result = mysqli_query($cn, $query);
 ?>
 
@@ -202,7 +237,6 @@ $result = mysqli_query($cn, $query);
                                 <th>ID</th>
                                 <th>Title</th>
                                 <th>Time Limit</th>
-                                <th>Points</th>
                                 <th>Created At</th>
                                 <th>Actions</th>
                             </tr>
@@ -213,7 +247,6 @@ $result = mysqli_query($cn, $query);
                                     <td><?php echo htmlspecialchars($row['id']); ?></td>
                                     <td><?php echo htmlspecialchars($row['title']); ?></td>
                                     <td><?php echo htmlspecialchars($row['time_limit']); ?> s</td>
-                                    <td><?php echo htmlspecialchars($row['points']); ?></td>
                                     <td><?php echo htmlspecialchars($row['created_at']); ?></td>
                                     <td>
                                         <button 
