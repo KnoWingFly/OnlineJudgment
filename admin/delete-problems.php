@@ -7,25 +7,54 @@ if (!isset($_SESSION['isloggedin']) || $_SESSION['admin'] != true) {
 
 include('../settings.php');
 
-// Handle problem deletion
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['action'] == 'delete') {
     $problemId = intval($_POST['problem_id']);
-    
-    // Connect to database
+
     $cn = mysqli_connect('localhost', $DBUSER, $DBPASS, $DBNAME);
     if (!$cn) {
         die("Connection failed: " . mysqli_connect_error());
     }
 
-    // Start transaction
     mysqli_begin_transaction($cn);
 
     try {
-        // Get the directory path of the problem to be deleted
         $problemDir = "../problems/" . $problemId;
 
-        // Get all problems with ID greater than the one being deleted
-        $getHigherIds = "SELECT id FROM problems WHERE id > ? ORDER BY id";
+        // Delete problem from database
+        $deleteQuery = "DELETE FROM problems WHERE id = ?";
+        $stmt = mysqli_prepare($cn, $deleteQuery);
+        mysqli_stmt_bind_param($stmt, "i", $problemId);
+        if (!mysqli_stmt_execute($stmt)) {
+            throw new Exception("Failed to delete problem from database");
+        }
+
+        // Delete original directory immediately
+        if (file_exists($problemDir)) {
+            function deleteDirectory($dir)
+            {
+                if (!file_exists($dir))
+                    return true;
+                if (!is_dir($dir))
+                    return unlink($dir);
+                foreach (scandir($dir) as $item) {
+                    if ($item == '.' || $item == '..')
+                        continue;
+                    $path = $dir . DIRECTORY_SEPARATOR . $item;
+                    if (is_dir($path)) {
+                        deleteDirectory($path);
+                    } else {
+                        unlink($path);
+                    }
+                }
+                return rmdir($dir);
+            }
+            if (!deleteDirectory($problemDir)) {
+                throw new Exception("Failed to delete problem directory");
+            }
+        }
+
+        // Get remaining higher IDs in ascending order
+        $getHigherIds = "SELECT id FROM problems WHERE id > ? ORDER BY id ASC";
         $stmt = mysqli_prepare($cn, $getHigherIds);
         mysqli_stmt_bind_param($stmt, "i", $problemId);
         mysqli_stmt_execute($stmt);
@@ -35,77 +64,36 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['a
             $higherIds[] = $row['id'];
         }
 
-        // Delete the problem from database
-        $deleteQuery = "DELETE FROM problems WHERE id = ?";
-        $stmt = mysqli_prepare($cn, $deleteQuery);
-        mysqli_stmt_bind_param($stmt, "i", $problemId);
-        
-        if (!mysqli_stmt_execute($stmt)) {
-            throw new Exception("Failed to delete problem from database");
-        }
-
-        // Update the IDs of remaining problems
+        // Rename directories in ascending order
         foreach ($higherIds as $oldId) {
             $newId = $oldId - 1;
-            
-            // Rename the directory first (from highest to lowest to avoid conflicts)
             $oldDir = "../problems/" . $oldId;
             $newDir = "../problems/" . $newId;
-            
+
             if (file_exists($oldDir) && !rename($oldDir, $newDir)) {
                 throw new Exception("Failed to rename directory from $oldId to $newId");
             }
-            
-            // Update the ID in database
-            $updateQuery = "UPDATE problems SET id = ? WHERE id = ?";
-            $stmt = mysqli_prepare($cn, $updateQuery);
-            mysqli_stmt_bind_param($stmt, "ii", $newId, $oldId);
-            
-            if (!mysqli_stmt_execute($stmt)) {
-                throw new Exception("Failed to update problem ID from $oldId to $newId");
-            }
         }
 
-        // Now delete the original problem directory if it still exists
-        if (file_exists($problemDir)) {
-            // Recursive directory removal function
-            function deleteDirectory($dir) {
-                if (!file_exists($dir)) return true;
-                if (!is_dir($dir)) return unlink($dir);
-                
-                foreach (scandir($dir) as $item) {
-                    if ($item == '.' || $item == '..') continue;
-                    
-                    $path = $dir . DIRECTORY_SEPARATOR . $item;
-                    if (is_dir($path)) {
-                        deleteDirectory($path);
-                    } else {
-                        unlink($path);
-                    }
-                }
-                
-                return rmdir($dir);
-            }
-
-            if (!deleteDirectory($problemDir)) {
-                throw new Exception("Failed to delete problem directory");
-            }
+        // Bulk update IDs in database
+        $updateQuery = "UPDATE problems SET id = id - 1 WHERE id > ? ORDER BY id ASC";
+        $stmt = mysqli_prepare($cn, $updateQuery);
+        mysqli_stmt_bind_param($stmt, "i", $problemId);
+        if (!mysqli_stmt_execute($stmt)) {
+            throw new Exception("Failed to update problem IDs");
         }
 
-        // Commit transaction
         mysqli_commit($cn);
         $message = "Problem deleted successfully and IDs reordered";
     } catch (Exception $e) {
-        // Rollback transaction
         mysqli_rollback($cn);
         $message = "Error: " . $e->getMessage();
     }
 
-    // Close connection
     mysqli_close($cn);
 }
 
-// Fetch problems
+// Fetch remaining problems
 $cn = mysqli_connect('localhost', $DBUSER, $DBPASS, $DBNAME);
 if (!$cn) {
     die("Connection failed: " . mysqli_connect_error());
@@ -117,6 +105,7 @@ $result = mysqli_query($cn, $query);
 
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+
 <head>
     <meta name="Keywords" content="programming, contest, coding, judge" />
     <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
@@ -137,18 +126,23 @@ $result = mysqli_query($cn, $query);
             border-collapse: collapse;
             margin-top: 20px;
         }
-        .problems-table th, .problems-table td {
+
+        .problems-table th,
+        .problems-table td {
             border: 1px solid #ddd;
             padding: 8px;
             text-align: left;
         }
+
         .problems-table th {
             background-color: #f2f2f2;
             color: #333;
         }
+
         .problems-table tr:nth-child(even) {
             background-color: #f9f9f9;
         }
+
         .delete-btn {
             background-color: #ff4d4d;
             color: white;
@@ -157,9 +151,11 @@ $result = mysqli_query($cn, $query);
             cursor: pointer;
             border-radius: 3px;
         }
+
         .delete-btn:hover {
             background-color: #ff3333;
         }
+
         .message {
             padding: 10px;
             margin-bottom: 15px;
@@ -171,28 +167,28 @@ $result = mysqli_query($cn, $query);
     </style>
 
     <script type="text/javascript">
-    function confirmDelete(problemId, problemTitle) {
-        if (confirm('Are you sure you want to delete the problem "' + problemTitle + '"? This action cannot be undone.')) {
-            var form = document.createElement('form');
-            form.method = 'POST';
-            form.action = '';
+        function confirmDelete(problemId, problemTitle) {
+            if (confirm('Are you sure you want to delete the problem "' + problemTitle + '"? This action cannot be undone.')) {
+                var form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '';
 
-            var actionInput = document.createElement('input');
-            actionInput.type = 'hidden';
-            actionInput.name = 'action';
-            actionInput.value = 'delete';
-            form.appendChild(actionInput);
+                var actionInput = document.createElement('input');
+                actionInput.type = 'hidden';
+                actionInput.name = 'action';
+                actionInput.value = 'delete';
+                form.appendChild(actionInput);
 
-            var problemInput = document.createElement('input');
-            problemInput.type = 'hidden';
-            problemInput.name = 'problem_id';
-            problemInput.value = problemId;
-            form.appendChild(problemInput);
+                var problemInput = document.createElement('input');
+                problemInput.type = 'hidden';
+                problemInput.name = 'problem_id';
+                problemInput.value = problemId;
+                form.appendChild(problemInput);
 
-            document.body.appendChild(form);
-            form.submit();
+                document.body.appendChild(form);
+                form.submit();
+            }
         }
-    }
     </script>
 </head>
 
@@ -230,7 +226,7 @@ $result = mysqli_query($cn, $query);
 
                 <div class="admin-section">
                     <h2>Delete Problems</h2>
-                    
+
                     <table class="problems-table">
                         <thead>
                             <tr>
@@ -249,8 +245,7 @@ $result = mysqli_query($cn, $query);
                                     <td><?php echo htmlspecialchars($row['time_limit']); ?> s</td>
                                     <td><?php echo htmlspecialchars($row['created_at']); ?></td>
                                     <td>
-                                        <button 
-                                            class="delete-btn" 
+                                        <button class="delete-btn"
                                             onclick="confirmDelete(<?php echo $row['id']; ?>, '<?php echo htmlspecialchars(addslashes($row['title'])); ?>')">
                                             Delete
                                         </button>
@@ -279,9 +274,10 @@ $result = mysqli_query($cn, $query);
         </div>
     </div>
 </body>
+
 </html>
 
-<?php 
+<?php
 // Close database connection
 mysqli_close($cn);
 ?>
