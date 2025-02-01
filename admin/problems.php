@@ -29,40 +29,26 @@ function debug_log($message)
 
 function saveUploadedFile($file, $problemId, $filename, $subdir = '')
 {
-    debug_log("Starting file upload for problem $problemId: $filename");
-
     $targetDir = "../problems/" . $problemId . "/" . ($subdir ? $subdir . "/" : "");
 
     if (!file_exists($targetDir)) {
-        debug_log("Creating directory: $targetDir");
-        if (!mkdir($targetDir, 0777, true)) {
-            debug_log("Failed to create directory");
-            return false;
-        }
+        mkdir($targetDir, 0777, true);
         chmod($targetDir, 0777);
     }
 
-    if ($file['error'] == UPLOAD_ERR_NO_FILE) {
+    if ($file['error'] == UPLOAD_ERR_NO_FILE)
         return true;
-    }
-
-    if ($file['error'] !== UPLOAD_ERR_OK) {
-        debug_log("Upload error: " . $file['error']);
+    if ($file['error'] !== UPLOAD_ERR_OK)
         return false;
-    }
 
     $targetPath = $targetDir . $filename;
-    debug_log("Moving file to: $targetPath");
-
-    if (!move_uploaded_file($file["tmp_name"], $targetPath)) {
-        debug_log("Failed to move uploaded file");
+    if (!move_uploaded_file($file["tmp_name"], $targetPath))
         return false;
-    }
 
     chmod($targetPath, 0666);
-    debug_log("File upload successful");
     return true;
 }
+
 function generateStatement($title, $timeLimit, $inputFormat, $outputFormat, $sampleInput, $sampleOutput, $description, $constraints, $imagePath = null)
 {
     $imageSection = '';
@@ -272,348 +258,252 @@ function compileAndTest($problemId)
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     debug_log("Form submitted");
     try {
-        if (!isset($_POST['action']) || $_POST['action'] != 'add') {
-            throw new Exception("Invalid action");
-        }
-
-        $required_fields = [
-            'title',
-            'timeLimit',
-            'description',
-            'inputFormat',
-            'outputFormat',
-            'constraints',
-            'sampleInput',
-            'sampleOutput'
-        ];
-        foreach ($required_fields as $field) {
-            if (empty($_POST[$field])) {
-                throw new Exception("Missing required field: $field");
-            }
-        }
-
-        if (!isset($_FILES['generator']) || !isset($_FILES['solution'])) {
-            throw new Exception("Missing uploaded files");
-        }
-
-        debug_log("Connecting to database");
         $cn = mysqli_connect('localhost', $DBUSER, $DBPASS, $DBNAME);
-        if (!$cn) {
-            throw new Exception("Database connection failed: " . mysqli_connect_error());
-        }
+        if (!$cn)
+            throw new Exception("Database connection failed");
 
+        // Start transaction
         mysqli_begin_transaction($cn);
 
+        // Get next problem ID first
+        $result = mysqli_query($cn, "SELECT MAX(id) AS max_id FROM problems");
+        $row = mysqli_fetch_assoc($result);
+        $newProblemId = isset($row['max_id']) ? $row['max_id'] + 1 : 1;
+
+        // Insert with manual ID
         $title = mysqli_real_escape_string($cn, $_POST['title']);
         $timeLimit = floatval($_POST['timeLimit']);
-
-        $imagePath = null;
-        if (isset($_FILES['problemImage']) && $_FILES['problemImage']['error'] == UPLOAD_ERR_OK) {
-            $imageExtension = pathinfo($_FILES['problemImage']['name'], PATHINFO_EXTENSION);
-            $imageName = 'problem_image.' . $imageExtension;
-        }
-
-        debug_log("Inserting problem into database");
-        $query = "INSERT INTO problems (title, time_limit, created_at) 
-             VALUES (?, ?, NOW())";
+        $query = "INSERT INTO problems (id, title, time_limit, created_at) VALUES (?, ?, ?, NOW())";
         $stmt = mysqli_prepare($cn, $query);
-        if (!$stmt) {
-            throw new Exception("Prepare failed: " . mysqli_error($cn));
+        mysqli_stmt_bind_param($stmt, "isd", $newProblemId, $title, $timeLimit);
+        if (!mysqli_stmt_execute($stmt))
+            throw new Exception("Insert failed: " . mysqli_error($cn));
+
+        // Create problem directory
+        $problemDir = "../problems/" . $newProblemId . "/";
+        if (!mkdir($problemDir, 0777, true))
+            throw new Exception("Failed to create problem directory");
+        chmod($problemDir, 0777);
+
+        // Handle image upload
+        $imagePath = null;
+        if ($_FILES['problemImage']['error'] == UPLOAD_ERR_OK) {
+            $imageDir = $problemDir . "Images/";
+            mkdir($imageDir, 0777, true);
+            $imageName = 'problem_image.' . pathinfo($_FILES['problemImage']['name'], PATHINFO_EXTENSION);
+            move_uploaded_file($_FILES['problemImage']['tmp_name'], $imageDir . $imageName);
+            $imagePath = $newProblemId . "/Images/" . $imageName;
         }
 
-        mysqli_stmt_bind_param($stmt, "sd", $title, $timeLimit);
-
-        if (!mysqli_stmt_execute($stmt)) {
-            throw new Exception("Database insert failed: " . mysqli_error($cn));
-        }
-
-        $problemId = mysqli_insert_id($cn);
-        if (!$problemId) {
-            throw new Exception("Failed to get inserted problem ID");
-        }
-        debug_log("Problem ID: $problemId");
-
-        $problemDir = "../problems/" . $problemId . "/";
-
-        if (!file_exists($problemDir)) {
-            debug_log("Creating problem directory: $problemDir");
-            if (!mkdir($problemDir, 0777, true)) {
-                throw new Exception("Failed to create problem directory");
-            }
-            chmod($problemDir, 0777);
-        }
-
-        $imageFullPath = null;
-        if (isset($_FILES['problemImage']) && $_FILES['problemImage']['error'] == UPLOAD_ERR_OK) {
-            $imagesDir = $problemDir . "Images/";
-            if (!file_exists($imagesDir)) {
-                mkdir($imagesDir, 0777, true);
-                chmod($imagesDir, 0777);
-            }
-
-            $imageName = 'problem_image.' . $imageExtension;
-            $imageFullPath = $problemId . "/Images/" . $imageName;
-            $imageTargetPath = $imagesDir . $imageName;
-
-            if (!move_uploaded_file($_FILES['problemImage']['tmp_name'], $imageTargetPath)) {
-                throw new Exception("Failed to save problem image");
-            }
-            chmod($imageTargetPath, 0666);
-        }
-
-        debug_log("Generating statement HTML");
+        // Generate and save problem statement
         $statementHtml = generateStatement(
             $title,
             $timeLimit,
-            mysqli_real_escape_string($cn, $_POST['inputFormat']),
-            mysqli_real_escape_string($cn, $_POST['outputFormat']),
-            mysqli_real_escape_string($cn, $_POST['sampleInput']),
-            mysqli_real_escape_string($cn, $_POST['sampleOutput']),
-            mysqli_real_escape_string($cn, $_POST['description']),
-            mysqli_real_escape_string($cn, $_POST['constraints']),
-            $imageFullPath
+            $_POST['inputFormat'],
+            $_POST['outputFormat'],
+            $_POST['sampleInput'],
+            $_POST['sampleOutput'],
+            $_POST['description'],
+            $_POST['constraints'],
+            $imagePath
         );
-
-        debug_log("Saving statement HTML");
-        if (file_put_contents($problemDir . "statement.html", $statementHtml) === false) {
-            throw new Exception("Failed to save statement HTML: " . error_get_last()['message']);
-        }
+        file_put_contents($problemDir . "statement.html", $statementHtml);
         chmod($problemDir . "statement.html", 0666);
 
-        debug_log("Saving uploaded files");
-        if (!saveUploadedFile($_FILES["generator"], $problemId, "generator.cpp")) {
-            throw new Exception("Failed to save generator file");
+        // Save code files
+        if (!saveUploadedFile($_FILES["generator"], $newProblemId, "generator.cpp")) {
+            throw new Exception("Failed to save generator");
+        }
+        if (!saveUploadedFile($_FILES["solution"], $newProblemId, "solution.cpp")) {
+            throw new Exception("Failed to save solution");
         }
 
-        if (!saveUploadedFile($_FILES["solution"], $problemId, "solution.cpp")) {
-            throw new Exception("Failed to save solution file");
-        }
-
-        debug_log("Running compile and test");
-        if (!compileAndTest($problemId)) {
-            throw new Exception("Compilation or testing failed");
+        // Compile and test
+        if (!compileAndTest($newProblemId)) {
+            throw new Exception("Compilation/testing failed");
         }
 
         mysqli_commit($cn);
-        $message = "Problem added successfully";
-        debug_log("Problem added successfully");
-
+        $message = "Problem added successfully! ID: " . $newProblemId;
     } catch (Exception $e) {
-        debug_log("Error occurred: " . $e->getMessage());
-        if (isset($cn)) {
-            mysqli_rollback($cn);
-        }
-        $message = "Error: " . htmlspecialchars($e->getMessage());
+        mysqli_rollback($cn);
+        $message = "Error: " . $e->getMessage();
     } finally {
-        if (isset($cn)) {
+        if (isset($cn))
             mysqli_close($cn);
-        }
     }
 }
 ?>
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<script src="https://cdn.tailwindcss.com">
+    </scrip >
 
-<head>
-    <meta name="Keywords" content="programming, contest, coding, judge" />
-    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
-    <meta name="Distribution" content="Global" />
-    <meta name="Robots" content="index,follow" />
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap');
 
-    <link rel="stylesheet" href="../images/Envision.css" type="text/css" />
-    <link rel="stylesheet" href="../images/Tabs.css" type="text/css" />
-    <title>Programming Contest - Manage Problems</title>
+            body {
+                font - family: 'Inter', sans-serif;
+            background: #000000;
+            color: #FFFFFF;
+        }
 
-    <script type="text/javascript" src="../jquery-1.3.1.js"></script>
-    <script type="text/javascript" src="../jquery.timers-1.1.2.js"></script>
+            .code-font {
+                font - family: 'IBM Plex Mono', monospace;
+        }
+        </style>
+
     <?php include('../timer.php'); ?>
+    </head >
 
-    <style type="text/css">
-        .admin-section {
-            background: #fff;
-            padding: 15px;
-            margin-bottom: 20px;
-            border: 1px solid #e0e0e0;
-            border-radius: 4px;
-        }
+        <body class="bg-black text-gray-200">
+            <!-- Header and Menu -->
+            <?php include('../Layout/header.php'); ?>
+            <?php include('../Layout/Menu.php'); ?>
 
-        .admin-section h2 {
-            color: #88ac0b;
-            font-size: 18px;
-            margin-top: 0;
-            padding-bottom: 5px;
-            border-bottom: 1px solid #e0e0e0;
-        }
+            <div class="min-h-screen flex">
+                <!-- Sidebar -->
+                <div class="w-64 bg-[#1A1A1A] min-h-screen">
+                    <div class="sticky top-0 p-6">
+                        <h3 class="text-xl font-bold text-[#0736FF] mb-4">Admin Menu</h3>
+                        <nav class="space-y-2">
+                            <a href="problems.php"
+                                class="flex items-center px-4 py-3 text-gray-300 hover:bg-[#0A0A0A] rounded-lg transition-colors bg-[#0A0A0A]">
+                                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                </svg>
+                                Manage Problems
+                            </a>
+                            <a href="delete-problems.php"
+                                class="flex items-center px-4 py-3 text-gray-300 hover:bg-[#0A0A0A] rounded-lg transition-colors">
+                                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                                Delete Problems
+                            </a>
+                            <a href="users.php"
+                                class="flex items-center px-4 py-3 text-gray-300 hover:bg-[#0A0A0A] rounded-lg transition-colors">
+                                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                                </svg>
+                                Manage Users
+                            </a>
+                            <a href="setting.php"
+                                class="flex items-center px-4 py-3 text-gray-300 hover:bg-[#0A0A0A] rounded-lg transition-colors">
+                                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                Contest Settings
+                            </a>
+                        </nav>
 
-        .form-group {
-            margin-bottom: 15px;
-        }
+                        <?php include('../sidebar.php'); ?>
+                    </div>
+                </div>
 
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            color: #555;
-        }
+                <!-- Main Content -->
+                <div class="flex-1 p-8">
+                    <div class="max-w-4xl mx-auto">
+                        <?php if (isset($message)): ?>
+                            <div
+                                class="mb-6 p-4 rounded-lg <?= strpos($message, 'Error') !== false ? 'bg-red-900/50 text-red-300' : 'bg-emerald-900/20 text-emerald-400' ?>">
+                                <?= htmlspecialchars($message) ?>
+                            </div>
+                        <?php endif; ?>
 
-        .form-group input[type="text"],
-        .form-group input[type="number"],
-        .form-group textarea,
-        .form-group input[type="file"] {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            background: #f9f9f9;
-        }
+                        <div class="bg-[#1A1A1A] p-8 rounded-xl border border-[#2A2A2A]">
+                            <h1 class="text-3xl font-bold text-[#0736FF] mb-8">Add New Problem</h1>
 
-        .form-group textarea {
-            height: 150px;
-            font-family: monospace;
-            resize: vertical;
-        }
+                            <form method="POST" enctype="multipart/form-data" class="space-y-6">
+                                <input type="hidden" name="action" value="add" />
 
-        .form-group input[type="submit"] {
-            padding: 8px 20px;
-            background: #88ac0b;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-gray-400 mb-2">Problem Title</label>
+                                        <input type="text" name="title" required
+                                            class="w-full bg-[#0A0A0A] border border-[#2A2A2A] text-gray-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#0736FF] focus:border-transparent outline-none">
+                                    </div>
 
-        .form-group input[type="submit"]:hover {
-            background: #7a9d0a;
-        }
+                                    <div>
+                                        <label class="block text-gray-400 mb-2">Time Limit (seconds)</label>
+                                        <input type="number" name="timeLimit" step="0.1" required
+                                            class="w-full bg-[#0A0A0A] border border-[#2A2A2A] text-gray-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#0736FF] focus:border-transparent outline-none">
+                                    </div>
 
-        .message {
-            padding: 10px;
-            margin-bottom: 15px;
-            border-radius: 4px;
-            background: #f0f9eb;
-            border: 1px solid #88ac0b;
-            color: #67a70c;
-        }
-    </style>
-</head>
+                                    <div>
+                                        <label class="block text-gray-400 mb-2">Problem Description</label>
+                                        <textarea name="description" required rows="4"
+                                            class="w-full bg-[#0A0A0A] border border-[#2A2A2A] text-gray-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#0736FF] focus:border-transparent outline-none code-font"></textarea>
+                                    </div>
 
-<body class="menu7">
-    <div id="wrap">
-        <?php include('../header.php'); ?>
+                                    <div>
+                                        <label class="block text-gray-400 mb-2">Input Format</label>
+                                        <textarea name="inputFormat" required rows="4"
+                                            class="w-full bg-[#0A0A0A] border border-[#2A2A2A] text-gray-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#0736FF] focus:border-transparent outline-none code-font"></textarea>
+                                    </div>
 
-        <div id="menu">
-            <ul>
-                <?php if (!isset($_SESSION['isloggedin']))
-                    print '<li id="menu1"><a href="../login.php">Login</a></li>'; ?>
-                <?php if (isset($_SESSION['isloggedin']))
-                    print '<li id="menu2"><a href="../index.php">Problems</a></li>'; ?>
-                <?php if (isset($_SESSION['isloggedin']))
-                    print '<li id="menu3"><a href="../submissions.php">Submissions</a></li>'; ?>
-                <?php if (isset($_SESSION['isloggedin']))
-                    print '<li id="menu4"><a href="../scoreboard.php">Scoreboard</a></li>'; ?>
-                <li id="menu5"><a href="../faq.php">FAQ</a></li>
-                <?php if (isset($_SESSION['isloggedin']))
-                    print '<li id="menu6"><a href="../chat.php">Chat</a></li>'; ?>
-                <?php if (isset($_SESSION['admin']))
-                    print '<li id="menu7"><a href="admin.php">Admin</a></li>'; ?>
-                <?php if (isset($_SESSION['isloggedin']))
-                    print '<li id="menu8"><a href="../personal.php">Personal</a></li>'; ?>
-                <?php if (isset($_SESSION['isloggedin']))
-                    print '<li id="menu9"><a href="../logout.php">Logout</a></li>'; ?>
-            </ul>
-        </div>
+                                    <div>
+                                        <label class="block text-gray-400 mb-2">Output Format</label>
+                                        <textarea name="outputFormat" required rows="4"
+                                            class="w-full bg-[#0A0A0A] border border-[#2A2A2A] text-gray-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#0736FF] focus:border-transparent outline-none code-font"></textarea>
+                                    </div>
 
-        <div id="content-wrap">
-            <div id="main">
-                <?php if (isset($message)): ?>
-                    <div class="message"><?php echo htmlspecialchars($message); ?></div>
-                <?php endif; ?>
+                                    <div>
+                                        <label class="block text-gray-400 mb-2">Constraints</label>
+                                        <textarea name="constraints" required rows="4"
+                                            class="w-full bg-[#0A0A0A] border border-[#2A2A2A] text-gray-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#0736FF] focus:border-transparent outline-none code-font"></textarea>
+                                    </div>
 
-                <div class="admin-section">
-                    <h2>Add New Problem</h2>
-                    <form method="POST" enctype="multipart/form-data">
-                        <input type="hidden" name="action" value="add" />
+                                    <div>
+                                        <label class="block text-gray-400 mb-2">Sample Input</label>
+                                        <textarea name="sampleInput" required rows="4"
+                                            class="w-full bg-[#0A0A0A] border border-[#2A2A2A] text-gray-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#0736FF] focus:border-transparent outline-none code-font"></textarea>
+                                    </div>
 
-                        <div class="form-group">
-                            <label>Problem Title:</label>
-                            <input type="text" name="title" required />
+                                    <div>
+                                        <label class="block text-gray-400 mb-2">Sample Output</label>
+                                        <textarea name="sampleOutput" required rows="4"
+                                            class="w-full bg-[#0A0A0A] border border-[#2A2A2A] text-gray-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-[#0736FF] focus:border-transparent outline-none code-font"></textarea>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-gray-400 mb-2">Generator (C++)</label>
+                                        <input type="file" name="generator" accept=".cpp" required
+                                            class="w-full file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[#0736FF] file:text-white hover:file:bg-[#062DBF]">
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-gray-400 mb-2">Solution (C++)</label>
+                                        <input type="file" name="solution" accept=".cpp" required
+                                            class="w-full file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[#0736FF] file:text-white hover:file:bg-[#062DBF]">
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-gray-400 mb-2">Problem Illustration Image
+                                            (Optional)</label>
+                                        <input type="file" name="problemImage" accept="image/*"
+                                            class="w-full file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[#0736FF] file:text-white hover:file:bg-[#062DBF]">
+                                    </div>
+
+                                    <button type="submit"
+                                        class="w-full bg-[#0736FF] text-white px-6 py-4 rounded-lg hover:bg-[#062DBF] transition-colors font-semibold">
+                                        Add Problem
+                                    </button>
+                                </div>
+                            </form>
                         </div>
-
-                        <div class="form-group">
-                            <label>Time Limit (seconds):</label>
-                            <input type="number" name="timeLimit" step="0.1" required />
-                        </div>
-
-                        <div class="form-group">
-                            <label>Problem Description:</label>
-                            <textarea name="description" required placeholder="Describe the problem here..."></textarea>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Input Format:</label>
-                            <textarea name="inputFormat" required placeholder="Describe the input format..."></textarea>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Output Format:</label>
-                            <textarea name="outputFormat" required
-                                placeholder="Describe the output format..."></textarea>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Constraints:</label>
-                            <textarea name="constraints" required placeholder="List all constraints..."></textarea>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Sample Input:</label>
-                            <textarea name="sampleInput" required></textarea>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Sample Output:</label>
-                            <textarea name="sampleOutput" required></textarea>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Generator (C++):</label>
-                            <input type="file" name="generator" accept=".cpp" required />
-                        </div>
-
-                        <div class="form-group">
-                            <label>Solution (C++):</label>
-                            <input type="file" name="solution" accept=".cpp" required />
-                        </div>
-
-                        <div class="form-group">
-                            <label>Problem Illustration Image (Optional):</label>
-                            <input type="file" name="problemImage" accept="image/*" />
-                        </div>
-
-                        <div class="form-group">
-                            <input type="submit" value="Add Problem" />
-                        </div>
-                    </form>
+                    </div>
                 </div>
             </div>
 
-            <div id="sidebar">
-                <h3>Admin Menu</h3>
-                <ul class="sidemenu">
-                    <li><a href="problems.php">Manage Problems</a></li>
-                    <li><a href="users.php">Manage Users</a></li>
-                    <li><a href="setting.php">Contest Settings</a></li>
-                </ul>
+            <footer class="border-t border-[#2A2A2A] py-6">
+                <?php include('../Layout/footer.php'); ?>
+            </footer>
+        </body>
 
-                <?php include('../sidebar.php'); ?>
-            </div>
-        </div>
-
-        <div id="footer">
-            <?php include('../footer.php'); ?>
-        </div>
-    </div>
-</body>
-
-</html>
+    </html >
