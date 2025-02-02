@@ -35,14 +35,6 @@
                     </a>
                 </li>
 
-                <?php if (isset($_SESSION['isloggedin'])): ?>
-                    <li>
-                        <a href="/chat.php" class="inline-block px-4 py-2 text-white hover:bg-white/10 rounded-[20px] transition-colors">
-                            Chat
-                        </a>
-                    </li>
-                <?php endif; ?>
-
                 <?php if (isset($_SESSION['admin'])): ?>
                     <li>
                         <a href="/admin/admin.php" class="inline-block px-4 py-2 text-white hover:bg-white/10 rounded-[20px] transition-colors">

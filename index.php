@@ -499,22 +499,6 @@ if (isset($_GET['mode']) && $_GET['mode'] == 'getFullDetails') {
 
                         <!-- Problem Container -->
                         <div class="glass-pane p-8 rounded-2xl border border-slate-700/50 relative">
-                            <!-- Problem Header -->
-                            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-                                <h1 class="text-3xl font-bold text-blue-400">
-                                    <?= htmlspecialchars($problem['title']) ?>
-                                </h1>
-                                <div class="flex gap-3">
-                                    <div
-                                        class="bg-emerald-900/20 text-emerald-400 px-4 py-2 rounded-xl code-font text-sm flex items-center gap-2">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                        <?= $problem['time_limit'] ?>s
-                                    </div>
-                                </div>
-                            </div>
 
                             <!-- Problem Statement -->
                             <div id="statementpanel" class="space-y-8 text-gray-300">
