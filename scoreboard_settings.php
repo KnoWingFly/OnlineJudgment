@@ -1,3 +1,3 @@
 <?php
-$scoreboardEnabled = 0;
+$scoreboardEnabled = 1;
 ?>
