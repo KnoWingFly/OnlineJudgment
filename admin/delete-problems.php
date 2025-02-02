@@ -6,6 +6,7 @@ if (!isset($_SESSION['isloggedin']) || $_SESSION['admin'] != true) {
 }
 
 include('../settings.php');
+include('admin-layout.php');
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['action']) && $_POST['action'] == 'delete') {
     $problemId = intval($_POST['problem_id']);
@@ -103,83 +104,137 @@ $query = "SELECT id, title, time_limit, created_at FROM problems ORDER BY id";
 $result = mysqli_query($cn, $query);
 ?>
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<!DOCTYPE html>
+<html lang="en">
 
 <head>
-    <meta name="Keywords" content="programming, contest, coding, judge" />
-    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
-    <meta name="Distribution" content="Global" />
-    <meta name="Robots" content="index,follow" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delete Problems - Admin Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap');
 
-    <link rel="stylesheet" href="../images/Envision.css" type="text/css" />
-    <link rel="stylesheet" href="../images/Tabs.css" type="text/css" />
-    <title>Programming Contest - Delete Problems</title>
-
-    <script type="text/javascript" src="../jquery-1.3.1.js"></script>
-    <script type="text/javascript" src="../jquery.timers-1.1.2.js"></script>
-    <?php include('../timer.php'); ?>
-
-    <style type="text/css">
-        .problems-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #09090b;
         }
 
-        .problems-table th,
-        .problems-table td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-
-        .problems-table th {
-            background-color: #f2f2f2;
-            color: #333;
-        }
-
-        .problems-table tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-
-        .delete-btn {
-            background-color: #ff4d4d;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            cursor: pointer;
-            border-radius: 3px;
-        }
-
-        .delete-btn:hover {
-            background-color: #ff3333;
-        }
-
-        .message {
-            padding: 10px;
-            margin-bottom: 15px;
-            border-radius: 4px;
-            background: #f0f9eb;
-            border: 1px solid #88ac0b;
-            color: #67a70c;
+        .code-font {
+            font-family: 'JetBrains Mono', monospace;
         }
     </style>
+    <?php include('../timer.php'); ?>
+</head>
 
-    <script type="text/javascript">
+<body class="bg-zinc-900 text-zinc-100 min-h-screen">
+    <!-- Header -->
+    <?php include('../Layout/header.php'); ?>
+    <?php include('../Layout/menu.php'); ?>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <?php if (isset($message)): ?>
+            <div
+                class="mb-6 p-4 rounded-lg <?= strpos($message, 'Error') !== false ? 'bg-red-900/50 text-red-300' : 'bg-emerald-900/20 text-emerald-400' ?>">
+                <?= htmlspecialchars($message) ?>
+            </div>
+        <?php endif; ?>
+
+        <div class="bg-zinc-800 p-8 rounded-xl border border-zinc-700 shadow-xl">
+            <div class="mb-8 pb-6 border-b border-zinc-700">
+                <h1 class="text-3xl font-bold text-blue-400">Delete Problems</h1>
+                <p class="mt-2 text-zinc-400">Manage and remove programming problems</p>
+
+                <!-- Navigation Menu -->
+                <div class="mt-6 flex flex-wrap gap-4">
+                    <a href="problems.php"
+                        class="inline-flex items-center px-4 py-2 bg-zinc-700 text-zinc-300 rounded-lg hover:bg-zinc-600 transition-colors">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                        Add Problems
+                    </a>
+                    <a href="delete-problems.php"
+                        class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Delete Problems
+                    </a>
+                    <a href="setting.php"
+                        class="inline-flex items-center px-4 py-2 bg-zinc-700 text-zinc-300 rounded-lg hover:bg-zinc-600 transition-colors">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        Contest Settings
+                    </a>
+                </div>
+
+            </div>
+
+            <!-- Problems Table -->
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="bg-zinc-900 text-left">
+                            <th class="px-6 py-4 text-sm font-semibold text-blue-400">ID</th>
+                            <th class="px-6 py-4 text-sm font-semibold text-blue-400">Title</th>
+                            <th class="px-6 py-4 text-sm font-semibold text-blue-400">Time Limit</th>
+                            <th class="px-6 py-4 text-sm font-semibold text-blue-400">Created At</th>
+                            <th class="px-6 py-4 text-sm font-semibold text-blue-400">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-zinc-700">
+                        <?php while ($row = mysqli_fetch_assoc($result)): ?>
+                            <tr class="hover:bg-zinc-700/50 transition-colors">
+                                <td class="px-6 py-4 text-zinc-300"><?php echo htmlspecialchars($row['id']); ?></td>
+                                <td class="px-6 py-4 text-zinc-300"><?php echo htmlspecialchars($row['title']); ?></td>
+                                <td class="px-6 py-4 text-zinc-300"><?php echo htmlspecialchars($row['time_limit']); ?> s
+                                </td>
+                                <td class="px-6 py-4 text-zinc-300"><?php echo htmlspecialchars($row['created_at']); ?></td>
+                                <td class="px-6 py-4">
+                                    <button
+                                        onclick="confirmDelete(<?php echo $row['id']; ?>, '<?php echo htmlspecialchars(addslashes($row['title'])); ?>')"
+                                        class="inline-flex items-center px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors">
+                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                        Delete
+                                    </button>
+                                </td>
+                            </tr>
+                        <?php endwhile; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <footer class="border-t border-zinc-800 py-6 mt-12">
+        <?php include('../Layout/footer.php'); ?>
+    </footer>
+
+    <script>
         function confirmDelete(problemId, problemTitle) {
             if (confirm('Are you sure you want to delete the problem "' + problemTitle + '"? This action cannot be undone.')) {
-                var form = document.createElement('form');
+                const form = document.createElement('form');
                 form.method = 'POST';
                 form.action = '';
 
-                var actionInput = document.createElement('input');
+                const actionInput = document.createElement('input');
                 actionInput.type = 'hidden';
                 actionInput.name = 'action';
                 actionInput.value = 'delete';
                 form.appendChild(actionInput);
 
-                var problemInput = document.createElement('input');
+                const problemInput = document.createElement('input');
                 problemInput.type = 'hidden';
                 problemInput.name = 'problem_id';
                 problemInput.value = problemId;
@@ -190,94 +245,6 @@ $result = mysqli_query($cn, $query);
             }
         }
     </script>
-</head>
-
-<body class="menu7">
-    <div id="wrap">
-        <?php include('../header.php'); ?>
-
-        <div id="menu">
-            <ul>
-                <?php if (!isset($_SESSION['isloggedin']))
-                    print '<li id="menu1"><a href="../login.php">Login</a></li>'; ?>
-                <?php if (isset($_SESSION['isloggedin']))
-                    print '<li id="menu2"><a href="../index.php">Problems</a></li>'; ?>
-                <?php if (isset($_SESSION['isloggedin']))
-                    print '<li id="menu3"><a href="../submissions.php">Submissions</a></li>'; ?>
-                <?php if (isset($_SESSION['isloggedin']))
-                    print '<li id="menu4"><a href="../scoreboard.php">Scoreboard</a></li>'; ?>
-                <li id="menu5"><a href="../faq.php">FAQ</a></li>
-                <?php if (isset($_SESSION['isloggedin']))
-                    print '<li id="menu6"><a href="../chat.php">Chat</a></li>'; ?>
-                <?php if (isset($_SESSION['admin']))
-                    print '<li id="menu7"><a href="admin.php">Admin</a></li>'; ?>
-                <?php if (isset($_SESSION['isloggedin']))
-                    print '<li id="menu8"><a href="../personal.php">Personal</a></li>'; ?>
-                <?php if (isset($_SESSION['isloggedin']))
-                    print '<li id="menu9"><a href="../logout.php">Logout</a></li>'; ?>
-            </ul>
-        </div>
-
-        <div id="content-wrap">
-            <div id="main">
-                <?php if (isset($message)): ?>
-                    <div class="message"><?php echo htmlspecialchars($message); ?></div>
-                <?php endif; ?>
-
-                <div class="admin-section">
-                    <h2>Delete Problems</h2>
-
-                    <table class="problems-table">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Title</th>
-                                <th>Time Limit</th>
-                                <th>Created At</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php while ($row = mysqli_fetch_assoc($result)): ?>
-                                <tr>
-                                    <td><?php echo htmlspecialchars($row['id']); ?></td>
-                                    <td><?php echo htmlspecialchars($row['title']); ?></td>
-                                    <td><?php echo htmlspecialchars($row['time_limit']); ?> s</td>
-                                    <td><?php echo htmlspecialchars($row['created_at']); ?></td>
-                                    <td>
-                                        <button class="delete-btn"
-                                            onclick="confirmDelete(<?php echo $row['id']; ?>, '<?php echo htmlspecialchars(addslashes($row['title'])); ?>')">
-                                            Delete
-                                        </button>
-                                    </td>
-                                </tr>
-                            <?php endwhile; ?>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div id="sidebar">
-                <h3>Admin Menu</h3>
-                <ul class="sidemenu">
-                    <li><a href="problems.php">Manage Problems</a></li>
-                    <li><a href="users.php">Manage Users</a></li>
-                    <li><a href="setting.php">Contest Settings</a></li>
-                </ul>
-
-                <?php include('../sidebar.php'); ?>
-            </div>
-        </div>
-
-        <div id="footer">
-            <?php include('../footer.php'); ?>
-        </div>
-    </div>
 </body>
 
 </html>
-
-<?php
-// Close database connection
-mysqli_close($cn);
-?>
