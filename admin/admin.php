@@ -98,6 +98,15 @@ if (file_exists("../scoreboard_settings.php")) {
         .section-content.collapsed {
             max-height: 0;
         }
+
+        /* Fullscreen styling */
+        #scoreboardContent:fullscreen {
+            width: 100%;
+            height: 100%;
+            background-color: #1a1a1a;
+            padding: 20px;
+            overflow: auto;
+        }
     </style>
 </head>
 
@@ -289,6 +298,38 @@ if (file_exists("../scoreboard_settings.php")) {
                     icon.style.transform = 'rotate(180deg)';
                 }
             });
+        }
+
+        // Fullscreen functionality
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'F11') {
+                event.preventDefault(); // Prevent default browser behavior
+                toggleFullscreen(document.getElementById('scoreboardContent'));
+            }
+        });
+
+        function toggleFullscreen(element) {
+            if (!document.fullscreenElement) {
+                if (element.requestFullscreen) {
+                    element.requestFullscreen();
+                } else if (element.mozRequestFullScreen) { // Firefox
+                    element.mozRequestFullScreen();
+                } else if (element.webkitRequestFullscreen) { // Chrome, Safari, Opera
+                    element.webkitRequestFullscreen();
+                } else if (element.msRequestFullscreen) { // IE/Edge
+                    element.msRequestFullscreen();
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.mozCancelFullScreen) { // Firefox
+                    document.mozCancelFullScreen();
+                } else if (document.webkitExitFullscreen) { // Chrome, Safari, Opera
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) { // IE/Edge
+                    document.msExitFullscreen();
+                }
+            }
         }
 
         $(document).ready(function () {
