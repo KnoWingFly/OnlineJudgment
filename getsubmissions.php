@@ -58,7 +58,7 @@ if ($result) {
         $status = match((int)$row['status']) {
             0 => ["✓", "text-green-500"],
             1 => ["CE", "text-red-500"],
-            2 => ["—", "text-red-500"],
+            2 => ["X", "text-red-500"],
             3 => ["TL", "text-red-500"],
             4 => ["IF", "text-red-500"],
             5 => ["RE", "text-red-500"],
