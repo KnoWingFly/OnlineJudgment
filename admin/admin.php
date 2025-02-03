@@ -239,9 +239,9 @@ if (file_exists("../scoreboard_settings.php")) {
             <div id="scoreboardContent"
                 class="section-content bg-gray-900 rounded-b-xl border-x border-b border-gray-700">
                 <div class="overflow-x-auto p-6">
-                    <table class="w-full border-collapse">
-                        <?php include('../getscores.php'); ?>
-                    </table>
+                    <div id="scores">
+                        <?php include('getscores.php'); ?>
+                    </div>
                 </div>
             </div>
         </div>
@@ -258,7 +258,7 @@ if (file_exists("../scoreboard_settings.php")) {
             $.ajax({
                 url: 'getscores.php',
                 success: function (data) {
-                    $('#scores').html(data);
+                    $('#scores').html(data); 
                 },
                 error: function (xhr, status, error) {
                     console.error("Error fetching scores:", error);
@@ -291,12 +291,44 @@ if (file_exists("../scoreboard_settings.php")) {
             });
         }
 
+        // Fullscreen functionality
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'F11') {
+                event.preventDefault(); // Prevent default browser behavior
+                toggleFullscreen(document.getElementById('scoreboardContent'));
+            }
+        });
+
+        function toggleFullscreen(element) {
+            if (!document.fullscreenElement) {
+                if (element.requestFullscreen) {
+                    element.requestFullscreen();
+                } else if (element.mozRequestFullScreen) { // Firefox
+                    element.mozRequestFullScreen();
+                } else if (element.webkitRequestFullscreen) { // Chrome, Safari, Opera
+                    element.webkitRequestFullscreen();
+                } else if (element.msRequestFullscreen) { // IE/Edge
+                    element.msRequestFullscreen();
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.mozCancelFullScreen) { // Firefox
+                    document.mozCancelFullScreen();
+                } else if (document.webkitExitFullscreen) { // Chrome, Safari, Opera
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) { // IE/Edge
+                    document.msExitFullscreen();
+                }
+            }
+        }
+
         $(document).ready(function () {
             initializeSections();
             dispTime();
             getScores();
             setInterval("dispTime()", 1000);
-            setInterval("getScores()", <?php echo $getLeaderInterval; ?>);
+            setInterval(getScores, <?php echo $getLeaderInterval; ?>);
         });
     </script>
 </body>
