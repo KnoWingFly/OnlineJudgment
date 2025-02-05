@@ -138,4 +138,79 @@ try {
     ]);
     exit;
 }
+
+function preventDuplicateSubmission($db, $userid, $problemid)
+{
+    $currentTime = time();
+    $timeThreshold = $currentTime - 5;
+
+    $stmt = $db->prepare("SELECT id FROM submissions WHERE userid = ? AND problemid = ? AND time > ?");
+    $stmt->bind_param("iii", $userid, $problemid, $timeThreshold);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    return $result->num_rows > 0;
+}
+
+function updateScoreAndRank($db, $userid, $problemid)
+{
+    try {
+        // Start transaction
+        $db->begin_transaction();
+
+        // Check if problem was already solved
+        $stmt = $db->prepare("SELECT id FROM submissions WHERE userid = ? AND problemid = ? AND status = 0");
+        $stmt->bind_param("ii", $userid, $problemid);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        if ($result->num_rows > 0) {
+            $db->commit();
+            return false; // Already solved
+        }
+
+        // Calculate total solved problems and update score dynamically
+        $updateScore = "
+        UPDATE users u 
+        SET u.score = (
+            SELECT COUNT(DISTINCT s.problemid)
+            FROM submissions s
+            WHERE s.userid = ? AND s.status = 0
+        )
+        WHERE u.id = ?";
+
+        $stmt = $db->prepare($updateScore);
+        $stmt->bind_param("ii", $userid, $userid);
+        if (!$stmt->execute()) {
+            throw new Exception("Failed to update score: " . $stmt->error);
+        }
+
+        // Reset rank counter
+        if (!$db->query("SET @rank = 0")) {
+            throw new Exception("Failed to initialize rank variable");
+        }
+
+        // Update all ranks
+        $updateRanks = "
+            UPDATE users u
+            JOIN (
+                SELECT id,
+                    @rank := @rank + 1 as new_rank
+                FROM users
+                ORDER BY score DESC, id ASC
+            ) r ON u.id = r.id
+            SET u.ranks = r.new_rank";
+
+        if (!$db->query($updateRanks)) {
+            throw new Exception("Failed to update ranks");
+        }
+
+        $db->commit();
+        return true;
+
+    } catch (Exception $e) {
+        $db->rollback();
+        error_log("Score update error: " . $e->getMessage());
+        throw $e;
+    }
+}
 ?>
