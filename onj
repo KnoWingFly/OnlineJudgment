@@ -160,89 +160,139 @@ def run_solution(executable_path, infile, outfile, sourcefile=None):
         return False, 0, None
 
 def compare_output(output_file, expected_file, input_file):
-    """Compare output with expected result and return first mismatch details with corresponding input"""
+    """
+    Compare output with expected result and return detailed comparison results
+    
+    Args:
+        output_file (str): Path to the actual output file
+        expected_file (str): Path to the expected output file
+        input_file (str): Path to the input file
+    
+    Returns:
+        tuple: (is_correct, comparison_result)
+    """
     try:
-        debug("Comparing output files")
+        debug("Starting output comparison")
         if not os.path.exists(output_file):
             debug(f"Output file not found: {output_file}")
-            return False, None
+            return False, {
+                'status': 'error',
+                'message': 'Output file not found',
+                'is_correct': False
+            }
         if not os.path.exists(expected_file):
             debug(f"Expected output file not found: {expected_file}")
-            return False, None
-            
-        # Read and parse input file into test cases
+            return False, {
+                'status': 'error',
+                'message': 'Expected output file not found',
+                'is_correct': False
+            }
+
+        # Read all files
         with open(input_file, 'r') as f:
             input_lines = f.readlines()
-            
-        # Parse input into test cases
+        with open(output_file, 'r') as f:
+            actual_lines = f.readlines()
+        with open(expected_file, 'r') as f:
+            expected_lines = f.readlines()
+
+        # Parse test cases
         test_cases = []
-        i = 0
-        num_cases = int(input_lines[i].strip())
-        i += 1
-        
-        while i < len(input_lines):
-            n, target = map(int, input_lines[i].strip().split())
-            i += 1
-            numbers = input_lines[i].strip()
-            i += 1
-            test_cases.append(f"{n} {target}\n{numbers}")
-            
-        with open(output_file, 'r') as f1, open(expected_file, 'r') as f2:
-            actual_lines = [line.strip() for line in f1.readlines()]
-            expected_lines = [line.strip() for line in f2.readlines()]
-            
-            # Find the first mismatch
-            mismatch_index = -1
-            is_correct = True
-            
-            # First ensure both have same number of non-empty lines
-            actual_lines = [line for line in actual_lines if line]
-            expected_lines = [line for line in expected_lines if line]
-            
-            if len(actual_lines) != len(expected_lines):
-                is_correct = False
-                # If actual output has fewer lines, that's our mismatch point
-                mismatch_index = min(len(actual_lines), len(expected_lines))
+        num_cases = int(input_lines[0].strip())
+        current_case = {'input': [], 'case_num': None}
+        case_marker = ''
+
+        # Parse input into test cases
+        for line in input_lines[1:]:  # Skip first line (number of cases)
+            line = line.strip()
+            if line.startswith('=== Case'):
+                if current_case['input']:
+                    test_cases.append(current_case)
+                case_num = int(line.split()[2])
+                current_case = {'input': [], 'case_num': case_num}
+                case_marker = line
             else:
-                # Find first line that doesn't match
-                for i, (actual, expected) in enumerate(zip(actual_lines, expected_lines)):
-                    if actual != expected:
-                        is_correct = False
-                        mismatch_index = i
-                        break
+                current_case['input'].append(line)
+        if current_case['input']:
+            test_cases.append(current_case)
+
+        # Process actual and expected outputs
+        actual_outputs = {}
+        expected_outputs = {}
+        current_case = None
+
+        # Parse actual output
+        for line in actual_lines:
+            line = line.strip()
+            if line.startswith('=== Case'):
+                current_case = int(line.split()[2])
+            elif current_case is not None and line:
+                actual_outputs[current_case] = line
+
+        # Parse expected output
+        current_case = None
+        for line in expected_lines:
+            line = line.strip()
+            if line.startswith('=== Case'):
+                current_case = int(line.split()[2])
+            elif current_case is not None and line:
+                expected_outputs[current_case] = line
+
+        # Compare outputs and find first mismatch
+        for case in test_cases:
+            case_num = case['case_num']
             
-            # Prepare the comparison result
-            if not is_correct and mismatch_index != -1:
-                # For mismatched output, only include the first mismatched test case
-                actual_output = actual_lines[mismatch_index] if mismatch_index < len(actual_lines) else "Missing output"
-                expected_output = expected_lines[mismatch_index] if mismatch_index < len(expected_lines) else "Missing output"
-                
-                # Get corresponding input for this test case
-                case_number = mismatch_index  # Since each line is a test case result
-                corresponding_input = test_cases[case_number] if case_number < len(test_cases) else "Input not available"
-                
-                comparison_result = {
-                    'input': corresponding_input,
-                    'expected': expected_output,
-                    'actual': actual_output,
+            # Check if output exists for this case
+            if case_num not in actual_outputs:
+                debug(f"Missing output for case {case_num}")
+                return False, {
+                    'status': 'wrong_answer',
+                    'case_number': case_num,
+                    'input': '\n'.join(case['input']),
+                    'expected': expected_outputs.get(case_num, "No output"),
+                    'actual': "Missing output",
                     'is_correct': False,
-                    'mismatch_line': mismatch_index + 1  # 1-based line number for human readability
+                    'message': f"No output provided for test case {case_num}"
                 }
-            else:
-                # If everything matches, include last test case
-                comparison_result = {
-                    'input': test_cases[-1] if test_cases else "",
-                    'expected': expected_lines[-1] if expected_lines else "",
-                    'actual': actual_lines[-1] if actual_lines else "",
-                    'is_correct': True
+
+            # Compare outputs
+            actual = actual_outputs[case_num].strip()
+            expected = expected_outputs[case_num].strip()
+
+            if actual != expected:
+                debug(f"Mismatch found in case {case_num}")
+                return False, {
+                    'status': 'wrong_answer',
+                    'case_number': case_num,
+                    'input': '\n'.join(case['input']),
+                    'expected': expected,
+                    'actual': actual,
+                    'is_correct': False,
+                    'message': f"Wrong answer in test case {case_num}"
                 }
-            
-            debug(f"Comparison result: {comparison_result}")
-            return is_correct, comparison_result
-            
+
+        # If we get here, all cases matched
+        # Return last case as example of correct output
+        last_case = test_cases[-1]
+        last_case_num = last_case['case_num']
+        
+        return True, {
+            'status': 'accepted',
+            'case_number': last_case_num,
+            'input': '\n'.join(last_case['input']),
+            'expected': expected_outputs[last_case_num],
+            'actual': actual_outputs[last_case_num],
+            'is_correct': True,
+            'message': "All test cases passed"
+        }
+
     except Exception as e:
-        debug(f"Error comparing files: {str(e)}")
-        return False, None
+        debug(f"Error during comparison: {str(e)}")
+        return False, {
+            'status': 'error',
+            'message': f"Comparison error: {str(e)}",
+            'is_correct': False
+        }
 
 def main():
     executable_path = None

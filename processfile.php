@@ -287,12 +287,12 @@ try {
         while (ob_get_level()) {
             ob_end_clean();
         }
-    
+
         // Set headers for JSON response
         header('Content-Type: application/json');
         header('Cache-Control: no-cache, must-revalidate');
         header('Expires: Mon, 26 Jul 1997 05:00:00 GMT');
-    
+
         // Prepare and send the response
         $response = [
             'verdict' => $returncode,
@@ -304,33 +304,33 @@ try {
             'new_score' => $newScore,
             'new_rank' => $newRank
         ];
-    
+
         // Include judge output if it exists
         if ($judgeOutput !== null) {
             $response['output'] = $judgeOutput;
         }
-    
+
         echo json_encode($response);
         $db->close();
         exit;
-    
+
     }
- } catch (Exception $e) {
-        // Clean output buffers
-        while (ob_get_level()) {
-            ob_end_clean();
-        }
-    
-        // Log the error
-        error_log("Submission Error: " . $e->getMessage());
-    
-        // Send error response as JSON
-        header('Content-Type: application/json');
-        echo json_encode([
-            'verdict' => VERDICT['RTE'],
-            'problemid' => isset($problemid) ? $problemid : -1,
-            'message' => 'System error occurred: ' . $e->getMessage()
-        ]);
-        exit;
+} catch (Exception $e) {
+    // Clean output buffers
+    while (ob_get_level()) {
+        ob_end_clean();
     }
+
+    // Log the error
+    error_log("Submission Error: " . $e->getMessage());
+
+    // Send error response as JSON
+    header('Content-Type: application/json');
+    echo json_encode([
+        'verdict' => VERDICT['RTE'],
+        'problemid' => isset($problemid) ? $problemid : -1,
+        'message' => 'System error occurred: ' . $e->getMessage()
+    ]);
+    exit;
+}
 ?>
