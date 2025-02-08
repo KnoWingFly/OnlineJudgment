@@ -29,11 +29,11 @@
                     </li>
                 <?php endif; ?>
 
-                <!-- <li>
+                 <li>
                     <a href="/faq.php" class="inline-block px-4 py-2 text-white hover:bg-white/10 rounded-[20px] transition-colors">
                         FAQ
                     </a>
-                </li> -->
+                </li> 
 
                 <?php if (isset($_SESSION['admin'])): ?>
                     <li>
