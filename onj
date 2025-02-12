@@ -78,6 +78,7 @@ int main() {{
 import sys
 
 {solution_code}
+
 def main():
     # Read number of test cases
     T = int(input())

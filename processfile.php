@@ -174,7 +174,8 @@ try {
 
         // Special handling for Java files
         if ($ext === 'java') {
-            $filename = "Main.java";  
+            // For Java files, always use original name but save a timestamped copy
+            $filename = "Main.java";  // Always use Main.java as the judge expects
 
             $archiveDir = $uploadDir . "archive/";
             if (!file_exists($archiveDir)) {
