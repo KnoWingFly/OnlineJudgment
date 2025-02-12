@@ -275,23 +275,18 @@ try {
 
         // Special handling for Java files
         if ($ext === 'java') {
-            // Extract the class name from the file content
-            $content = file_get_contents($_FILES[$problemid]["tmp_name"]);
-            if (preg_match("/\bpublic\s+class\s+(\w+)\b/", $content, $matches)) {
-                $className = $matches[1];
-                $filename = $className . ".java";
+            // For Java files, always use original name but save a timestamped copy
+            $filename = "Main.java";  // Always use Main.java as the judge expects
 
-                $archiveDir = $uploadDir . "archive/";
-                if (!file_exists($archiveDir)) {
-                    mkdir($archiveDir, 0755, true);
-                }
-                $archiveFile = $archiveDir . $className . "_" . $timestamp . ".java";
+            $archiveDir = $uploadDir . "archive/";
+            if (!file_exists($archiveDir)) {
+                mkdir($archiveDir, 0755, true);
+            }
 
-                if (!copy($_FILES[$problemid]["tmp_name"], $archiveFile)) {
-                    error_log("Failed to save archive copy: $archiveFile");
-                }
-            } else {
-                throw new Exception("Could not find valid public class declaration in Java file");
+            // Save an archived copy with timestamp
+            $archiveFile = $archiveDir . "Main_" . $timestamp . ".java";
+            if (!copy($_FILES[$problemid]["tmp_name"], $archiveFile)) {
+                error_log("Failed to save archive copy: $archiveFile");
             }
         } else {
             $filename = pathinfo($originalName, PATHINFO_FILENAME) . "_" . $timestamp . "." . $ext;
