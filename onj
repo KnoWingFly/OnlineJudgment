@@ -1,8 +1,10 @@
 #!/usr/bin/python3
 
-import sys, signal, os, subprocess, logging, json
+import sys, signal, os, subprocess, logging
+import re
 from pathlib import Path
 import time
+import json
 
 # Configure logging
 LOG_FILE = 'judge.log'
@@ -14,7 +16,7 @@ logging.basicConfig(
 
 # Constants
 PROBLEMDIR = 'problems'
-TIME_LIMIT = 100 # seconds
+TIME_LIMIT = 100  # seconds
 COMPILATION_TIME_LIMIT = 30  # seconds
 MAX_OUTPUT_SIZE = 10 * 1024 * 1024  # 10MB
 
@@ -28,110 +30,216 @@ VERDICT = {
     'RTE': 5           # Runtime Error
 }
 
+class SolutionWrapper:
+    def __init__(self):
+        self.templates = {
+            'c': '''
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+{solution_code}
+
+int main() {{
+    int T;
+    scanf("%d", &T);
+    char marker[100];
+    
+    for(int t = 1; t <= T; t++) {{
+        scanf(" %[^\\n]", marker);
+        printf("%s\\n", marker);
+        solve();
+    }}
+    return 0;
+}}
+''',
+            'cpp': '''
+#include <cstdio>
+#include <iostream>
+#include <string>
+using namespace std;
+
+{solution_code}
+
+int main() {{
+    int T;
+    scanf("%d", &T);
+    char marker[100];
+    
+    for(int t = 1; t <= T; t++) {{
+        scanf(" %[^\\n]", marker);
+        printf("%s\\n", marker);
+        solve();
+    }}
+    return 0;
+}}
+''',
+            'py': '''
+import sys
+
+{solution_code}
+
+def main():
+    # Read number of test cases
+    T = int(input())
+    
+    # Process each test case
+    for t in range(1, T + 1):
+        # Read and echo case marker
+        marker = input().strip()
+        print(marker)
+        
+        # Call the solve function for this test case
+        solve()
+
+if __name__ == "__main__":
+    main()
+''',
+
+'java': '''
+import java.util.*;
+
+{solution_code}
+
+class Main {{
+    public static void main(String[] args) {{
+        Scanner scanner = new Scanner(System.in);
+        try {{
+            Solution.init(scanner);
+            int T = scanner.nextInt();
+            scanner.nextLine(); // Consume newline
+            
+            for(int t = 1; t <= T; t++) {{
+                String marker = scanner.nextLine();
+                System.out.println(marker);
+                if (marker.startsWith("=== Case")) {{
+                    Solution.solve();
+                }}
+            }}
+        }} finally {{
+            scanner.close();
+        }}
+    }}
+}}
+'''
+        }
+
+    def wrap_solution(self, source_path):
+        """Wrap user's solution with appropriate template"""
+        try:
+            # Get absolute path
+            abs_source_path = os.path.abspath(source_path)
+            work_dir = os.path.dirname(abs_source_path)
+            
+            with open(abs_source_path, 'r') as f:
+                user_code = f.read().strip()
+            
+            ext = source_path.split('.')[-1].lower()
+            if ext not in self.templates:
+                raise ValueError(f"Unsupported file extension: {ext}")
+
+            # For Java, handle imports and class definitions
+            if ext == 'java':
+                # Split imports and actual code
+                import_lines = []
+                code_lines = []
+                in_solution_class = False
+                solution_code = []
+                
+                for line in user_code.split('\n'):
+                    line_strip = line.strip()
+                    if line_strip.startswith('import '):
+                        import_lines.append(line)
+                    elif line_strip.startswith('class Solution '):
+                        in_solution_class = True
+                    elif in_solution_class and line_strip.startswith('}'):
+                        in_solution_class = False
+                    elif in_solution_class and not line_strip.startswith('class Solution'):
+                        solution_code.append(line)
+                    else:
+                        code_lines.append(line)
+                
+                # Reconstruct solution code without the class definition
+                solution_code_without_class = '\n'.join(solution_code)
+                
+                # Add user imports to template imports
+                template = self.templates[ext]
+                if import_lines:
+                    # Insert user imports after template imports
+                    template_parts = template.split('\n', 1)
+                    template = template_parts[0] + '\n' + '\n'.join(import_lines) + '\n' + template_parts[1]
+
+                # Create wrapped code
+                wrapped_code = template.format(
+                    solution_code=user_code,
+                    solution_code_without_class=solution_code_without_class
+                )
+            else:
+                template = self.templates[ext]
+                wrapped_code = template.format(
+                    solution_code=user_code
+                )
+            
+            # For Java, always save as Main.java
+            if ext == 'java':
+                output_path = os.path.join(work_dir, "Main.java")
+            else:
+                output_path = os.path.join(work_dir, f"{os.path.splitext(os.path.basename(source_path))[0]}_wrapped.{ext}")
+            
+            with open(output_path, 'w') as f:
+                f.write(wrapped_code)
+                
+            return output_path
+        except Exception as e:
+            logging.debug(f"Error wrapping solution: {str(e)}")
+            return None
+
 def debug(msg):
     """Log debug messages"""
     logging.debug(msg)
     print(msg, file=sys.stderr)
 
-def compile_code(sourcefile, ext):
-    """Compile the submitted code"""
-    try:
-        debug(f"Starting compilation of {sourcefile}")
-        # Get absolute paths
-        source_path = os.path.abspath(sourcefile)
-        work_dir = os.path.dirname(source_path)
-        output_path = os.path.join(work_dir, "a.out")
-        
-        if ext == "cpp":
-            cmd = ["g++", "-Wall", "-O2", "-std=c++17", source_path, "-o", output_path]
-        elif ext == "c":
-            cmd = ["gcc", "-Wall", "-O2", "-std=c11", source_path, "-o", output_path]
-        elif ext == "py":
-            try:
-                subprocess.run(["python3", "-m", "py_compile", source_path], 
-                             check=True, capture_output=True, timeout=10)
-                return True, None
-            except subprocess.CalledProcessError as e:
-                debug(f"Python syntax error: {e.stderr}")
-                return False, None
-        elif ext == "java":
-            # For Java, we compile to class file in the same directory
-            class_name = os.path.splitext(os.path.basename(source_path))[0]
-            cmd = ["javac", source_path]
-            output_path = os.path.join(work_dir, f"{class_name}.class")
-        elif ext == "go":
-            # For Go, we compile to binary
-            cmd = ["go", "build", "-o", output_path, source_path]
-        else:
-            debug(f"Unsupported file extension: {ext}")
-            return False, None
-
-        debug(f"Running compilation command: {' '.join(cmd)}")
-        debug(f"Working directory: {work_dir}")
-        result = subprocess.run(cmd, 
-                              capture_output=True, 
-                              text=True, 
-                              timeout=COMPILATION_TIME_LIMIT,
-                              cwd=work_dir)
-        
-        if result.returncode != 0:
-            debug(f"Compilation failed with error:\n{result.stderr}")
-            return False, None
-        
-        # Verify the output file exists for compiled languages
-        if ext in ["c", "cpp", "go"]:
-            if not os.path.exists(output_path):
-                debug(f"Compilation appeared to succeed but no output file was created at {output_path}")
-                return False, None
-        elif ext == "java":
-            if not os.path.exists(output_path):
-                debug(f"Java compilation succeeded but class file not found at {output_path}")
-                return False, None
-            
-        debug(f"Compilation successful, output at: {output_path}")
-        return True, output_path
-        
-    except subprocess.TimeoutExpired:
-        debug("Compilation timed out")
-        return False, None
-    except Exception as e:
-        debug(f"Compilation error: {str(e)}")
-        return False, None
-
 def run_solution(executable_path, infile, outfile, sourcefile=None):
-    """Run the solution and capture both the result and actual output"""
+    """Run the compiled solution"""
     try:
-        debug(f"Starting solution execution with executable: {executable_path}")
+        debug(f"Starting solution execution with sourcefile: {sourcefile}")
         start_time = time.time()
         
         # Verify input file exists and is readable
         if not os.path.isfile(infile):
             debug(f"Input file not found: {infile}")
-            return False, 0, None
+            return False, 0
         
-        # Get work directory
-        work_dir = os.path.dirname(executable_path) if executable_path else os.getcwd()
+        # Get work directory from source file
+        if sourcefile:
+            work_dir = os.path.dirname(os.path.abspath(sourcefile))
+        else:
+            work_dir = os.path.dirname(executable_path) if executable_path else os.getcwd()
         
-        # Read input content
-        with open(infile, 'r') as f:
-            input_content = f.read()
+        debug(f"Working directory: {work_dir}")
         
-        with open(outfile, 'w') as fout:
-            # Determine command based on file type
+        with open(infile, 'r') as fin, open(outfile, 'w') as fout:
+            # For Python files, we need to use the wrapped file
             if sourcefile and sourcefile.endswith('.py'):
-                cmd = ["python3", sourcefile]
+                base_name = os.path.splitext(os.path.basename(sourcefile))[0]
+                wrapped_file = os.path.join(work_dir, f"{base_name}_wrapped.py")
+                debug(f"Looking for wrapped file at: {wrapped_file}")
+                if not os.path.exists(wrapped_file):
+                    debug(f"Wrapped Python file not found: {wrapped_file}")
+                    return False, 0
+                cmd = ["python3", wrapped_file]
             elif sourcefile and sourcefile.endswith('.java'):
-                class_name = os.path.splitext(os.path.basename(sourcefile))[0]
-                cmd = ["java", "-cp", work_dir, class_name]
+                cmd = ["java", "-cp", work_dir, "Main"]
             elif executable_path:
                 cmd = [executable_path]
             else:
                 debug("No valid command could be determined")
-                return False, 0, None
+                return False, 0
                 
+            debug(f"Running command: {' '.join(cmd)}")
             process = subprocess.run(
                 cmd,
-                input=input_content,
+                stdin=fin,
                 stdout=fout,
                 stderr=subprocess.PIPE,
                 timeout=TIME_LIMIT,
@@ -144,20 +252,146 @@ def run_solution(executable_path, infile, outfile, sourcefile=None):
         
         if process.returncode != 0:
             debug(f"Runtime error: {process.stderr}")
-            return False, execution_time, None
-        
-        # Read the actual output
-        with open(outfile, 'r') as f:
-            actual_output = f.read()
+            return False, execution_time
             
-        return True, execution_time, actual_output
+        return True, execution_time
         
     except subprocess.TimeoutExpired:
         debug("Time limit exceeded")
-        return False, TIME_LIMIT, None
+        return False, TIME_LIMIT
     except Exception as e:
         debug(f"Runtime error: {str(e)}")
-        return False, 0, None
+        return False, 0
+
+def compile_code(sourcefile, ext):
+    """Compile the submitted code"""
+    try:
+        debug(f"Starting compilation of {sourcefile}")
+        
+        # Create solution wrapper and wrap the code
+        wrapper = SolutionWrapper()
+        wrapped_file = wrapper.wrap_solution(sourcefile)
+        
+        if not wrapped_file:
+            debug("Failed to wrap solution code")
+            return False, None
+            
+        # Get absolute paths
+        source_path = os.path.abspath(wrapped_file)
+        work_dir = os.path.dirname(source_path)
+        
+        if ext == "py":
+            try:
+                # For Python, we just check syntax and return the wrapped file path
+                subprocess.run(["python3", "-m", "py_compile", source_path], 
+                             check=True, capture_output=True, timeout=10)
+                return True, source_path  # Return the wrapped file path
+            except subprocess.CalledProcessError as e:
+                debug(f"Python syntax error: {e.stderr}")
+                if os.path.exists(wrapped_file):
+                    os.remove(wrapped_file)
+                return False, None
+        
+        # Rest of the compilation logic for other languages...
+        output_path = os.path.join(work_dir, "a.out")
+        
+        if ext == "cpp":
+            cmd = ["g++", "-Wall", "-O2", "-std=c++17", source_path, "-o", output_path]
+        elif ext == "c":
+            cmd = ["gcc", "-Wall", "-O2", "-std=c11", source_path, "-o", output_path]
+        elif ext == "java":
+            cmd = ["javac", source_path]
+            output_path = os.path.join(work_dir, "Main.class")
+        elif ext == "go":
+            cmd = ["go", "build", "-o", output_path, source_path]
+        else:
+            debug(f"Unsupported file extension: {ext}")
+            if os.path.exists(wrapped_file):
+                os.remove(wrapped_file)
+            return False, None
+
+        debug(f"Running compilation command: {' '.join(cmd)}")
+        result = subprocess.run(cmd, 
+                              capture_output=True, 
+                              text=True, 
+                              timeout=COMPILATION_TIME_LIMIT,
+                              cwd=work_dir)
+        
+        if result.returncode != 0:
+            debug(f"Compilation failed with error:\n{result.stderr}")
+            if os.path.exists(wrapped_file):
+                os.remove(wrapped_file)
+            return False, None
+        
+        return True, output_path
+        
+    except subprocess.TimeoutExpired:
+        debug("Compilation timed out")
+        if os.path.exists(wrapped_file):
+            os.remove(wrapped_file)
+        return False, None
+    except Exception as e:
+        debug(f"Compilation error: {str(e)}")
+        if os.path.exists(wrapped_file):
+            os.remove(wrapped_file)
+        return False, None
+
+# def run_solution(executable_path, infile, outfile, sourcefile=None):
+#     """Run the compiled solution"""
+#     try:
+#         debug(f"Starting solution execution with sourcefile: {sourcefile}")
+#         start_time = time.time()
+        
+#         # Verify input file exists and is readable
+#         if not os.path.isfile(infile):
+#             debug(f"Input file not found: {infile}")
+#             return False, 0
+        
+#         # Get work directory
+#         work_dir = os.path.dirname(sourcefile) if sourcefile else os.getcwd()
+        
+#         with open(infile, 'r') as fin, open(outfile, 'w') as fout:
+#             # For Python files, we need to use the wrapped file
+#             if sourcefile and sourcefile.endswith('.py'):
+#                 wrapped_file = sourcefile.replace('.py', '_wrapped.py')
+#                 if not os.path.exists(wrapped_file):
+#                     debug(f"Wrapped Python file not found: {wrapped_file}")
+#                     return False, 0
+#                 cmd = ["python3", wrapped_file]
+#             elif sourcefile and sourcefile.endswith('.java'):
+#                 cmd = ["java", "-cp", work_dir, "Main"]
+#             elif executable_path:
+#                 cmd = [executable_path]
+#             else:
+#                 debug("No valid command could be determined")
+#                 return False, 0
+                
+#             debug(f"Running command: {' '.join(cmd)}")
+#             process = subprocess.run(
+#                 cmd,
+#                 stdin=fin,
+#                 stdout=fout,
+#                 stderr=subprocess.PIPE,
+#                 timeout=TIME_LIMIT,
+#                 text=True,
+#                 cwd=work_dir
+#             )
+            
+#         execution_time = time.time() - start_time
+#         debug(f"Execution completed in {execution_time:.3f} seconds")
+        
+#         if process.returncode != 0:
+#             debug(f"Runtime error: {process.stderr}")
+#             return False, execution_time
+            
+#         return True, execution_time
+        
+#     except subprocess.TimeoutExpired:
+#         debug("Time limit exceeded")
+#         return False, TIME_LIMIT
+#     except Exception as e:
+#         debug(f"Runtime error: {str(e)}")
+#         return False, 0
 
 def compare_output(output_file, expected_file, input_file):
     """
@@ -178,112 +412,62 @@ def compare_output(output_file, expected_file, input_file):
             return False, {
                 'status': 'error',
                 'message': 'Output file not found',
-                'is_correct': False
+                'is_correct': False,
+                'verdict': 'Runtime Error'
             }
         if not os.path.exists(expected_file):
             debug(f"Expected output file not found: {expected_file}")
             return False, {
                 'status': 'error',
                 'message': 'Expected output file not found',
-                'is_correct': False
+                'is_correct': False,
+                'verdict': 'Runtime Error'
             }
 
         # Read all files
         with open(input_file, 'r') as f:
-            input_lines = f.readlines()
+            input_content = f.read()
         with open(output_file, 'r') as f:
-            actual_lines = f.readlines()
+            actual_output = f.read()
         with open(expected_file, 'r') as f:
-            expected_lines = f.readlines()
+            expected_output = f.read()
 
-        # Parse test cases
-        test_cases = []
-        num_cases = int(input_lines[0].strip())
-        current_case = {'input': [], 'case_num': None}
-        case_marker = ''
-
-        # Parse input into test cases
-        for line in input_lines[1:]:  # Skip first line (number of cases)
-            line = line.strip()
-            if line.startswith('=== Case'):
-                if current_case['input']:
-                    test_cases.append(current_case)
-                case_num = int(line.split()[2])
-                current_case = {'input': [], 'case_num': case_num}
-                case_marker = line
-            else:
-                current_case['input'].append(line)
-        if current_case['input']:
-            test_cases.append(current_case)
-
-        # Process actual and expected outputs
-        actual_outputs = {}
-        expected_outputs = {}
-        current_case = None
-
-        # Parse actual output
-        for line in actual_lines:
-            line = line.strip()
-            if line.startswith('=== Case'):
-                current_case = int(line.split()[2])
-            elif current_case is not None and line:
-                actual_outputs[current_case] = line
-
-        # Parse expected output
-        current_case = None
-        for line in expected_lines:
-            line = line.strip()
-            if line.startswith('=== Case'):
-                current_case = int(line.split()[2])
-            elif current_case is not None and line:
-                expected_outputs[current_case] = line
-
-        # Compare outputs and find first mismatch
-        for case in test_cases:
-            case_num = case['case_num']
-            
-            # Check if output exists for this case
-            if case_num not in actual_outputs:
-                debug(f"Missing output for case {case_num}")
-                return False, {
-                    'status': 'wrong_answer',
-                    'case_number': case_num,
-                    'input': '\n'.join(case['input']),
-                    'expected': expected_outputs.get(case_num, "No output"),
-                    'actual': "Missing output",
-                    'is_correct': False,
-                    'message': f"No output provided for test case {case_num}"
-                }
-
-            # Compare outputs
-            actual = actual_outputs[case_num].strip()
-            expected = expected_outputs[case_num].strip()
-
-            if actual != expected:
-                debug(f"Mismatch found in case {case_num}")
-                return False, {
-                    'status': 'wrong_answer',
-                    'case_number': case_num,
-                    'input': '\n'.join(case['input']),
-                    'expected': expected,
-                    'actual': actual,
-                    'is_correct': False,
-                    'message': f"Wrong answer in test case {case_num}"
-                }
-
-        # If we get here, all cases matched
-        # Return last case as example of correct output
-        last_case = test_cases[-1]
-        last_case_num = last_case['case_num']
+        # Split into lines and filter empty lines
+        actual_lines = [line.strip() for line in actual_output.splitlines() if line.strip()]
+        expected_lines = [line.strip() for line in expected_output.splitlines() if line.strip()]
         
+        if actual_lines != expected_lines:
+            # Find first difference
+            case_num = 1
+            case_input = []
+            for i, (exp_line, act_line) in enumerate(zip(expected_lines + [''], actual_lines + [''])):
+                if exp_line != act_line:
+                    break
+                if exp_line.startswith('=== Case'):
+                    case_num = int(exp_line.split()[2])
+                    case_input = []
+                else:
+                    case_input.append(exp_line)
+
+            return False, {
+                'status': 'wrong_answer',
+                'case_number': case_num,
+                'input': input_content,
+                'expected': expected_output,
+                'actual': actual_output,
+                'is_correct': False,
+                'message': f"Wrong answer in test case {case_num}",
+                'verdict': 'Wrong Answer'
+            }
+
         return True, {
             'status': 'accepted',
-            'case_number': last_case_num,
-            'input': '\n'.join(last_case['input']),
-            'expected': expected_outputs[last_case_num],
-            'actual': actual_outputs[last_case_num],
+            'input': input_content,
+            'expected': expected_output,
+            'actual': actual_output,
             'is_correct': True,
-            'message': "All test cases passed"
+            'message': "All test cases passed",
+            'verdict': 'Accepted'
         }
 
     except Exception as e:
@@ -291,7 +475,8 @@ def compare_output(output_file, expected_file, input_file):
         return False, {
             'status': 'error',
             'message': f"Comparison error: {str(e)}",
-            'is_correct': False
+            'is_correct': False,
+            'verdict': 'Runtime Error'
         }
 
 def main():
@@ -301,6 +486,11 @@ def main():
         debug("Judge script started")
         if len(sys.argv) != 3:
             debug("Usage: ./onj <sourcefile> <problem>")
+            print(json.dumps({
+                'status': 'error',
+                'verdict': 'Invalid File',
+                'message': 'Invalid number of arguments'
+            }))
             sys.exit(VERDICT['ILLEGAL_FILE'])
 
         sourcefile = sys.argv[1]
@@ -310,12 +500,22 @@ def main():
         # Validate file exists
         if not os.path.isfile(sourcefile):
             debug(f"Source file not found: {sourcefile}")
+            print(json.dumps({
+                'status': 'error',
+                'verdict': 'Invalid File',
+                'message': 'Source file not found'
+            }))
             sys.exit(VERDICT['ILLEGAL_FILE'])
 
         # Get file extension
         ext = sourcefile.split(".")[-1].lower()
         if ext not in ["c", "cpp", "py", "java", "go"]:
             debug(f"Unsupported file extension: {ext}")
+            print(json.dumps({
+                'status': 'error',
+                'verdict': 'Invalid File',
+                'message': 'Unsupported file extension'
+            }))
             sys.exit(VERDICT['ILLEGAL_FILE'])
 
         # Check problem files exist
@@ -323,11 +523,21 @@ def main():
         expected_file = os.path.abspath(f"{PROBLEMDIR}/{problem}/out")
         if not os.path.isfile(infile) or not os.path.isfile(expected_file):
             debug("Problem input/output files not found")
+            print(json.dumps({
+                'status': 'error',
+                'verdict': 'Invalid File',
+                'message': 'Problem files not found'
+            }))
             sys.exit(VERDICT['ILLEGAL_FILE'])
 
         # Compile if needed
         success, executable_path = compile_code(sourcefile, ext)
         if not success:
+            print(json.dumps({
+                'status': 'error',
+                'verdict': 'Compile Error',
+                'message': 'Compilation failed'
+            }))
             sys.exit(VERDICT['COMPILE_ERROR'])
 
         # Prepare for execution
@@ -335,32 +545,34 @@ def main():
         output_file = os.path.join(work_dir, "output.txt")
         
         # Run solution
-        success, execution_time, actual_output = run_solution(executable_path, infile, output_file, sourcefile)
-        
+        success, execution_time = run_solution(executable_path, infile, output_file, sourcefile)
         if not success:
             if execution_time >= TIME_LIMIT:
                 print(json.dumps({
                     'status': 'error',
                     'verdict': 'Time Limit Exceeded',
-                    'execution_time': execution_time
+                    'execution_time': execution_time,
+                    'message': f'Time limit exceeded ({execution_time:.3f} seconds)'
                 }))
                 sys.exit(VERDICT['TIME_EXCEEDED'])
             print(json.dumps({
                 'status': 'error',
                 'verdict': 'Runtime Error',
-                'execution_time': execution_time
+                'execution_time': execution_time,
+                'message': 'Runtime error occurred'
             }))
             sys.exit(VERDICT['RTE'])
 
-        # Compare output and get details with input file
-        is_correct, comparison_result = compare_output(output_file, expected_file, infile)
+        # Compare output and get details
+        success, comparison_result = compare_output(output_file, expected_file, infile)
         
+        # Add execution time to result
         comparison_result['execution_time'] = execution_time
         
-        # Print result as JSON
+        # Print the JSON result
         print(json.dumps(comparison_result))
         
-        if is_correct:
+        if success:
             sys.exit(VERDICT['CORRECT'])
         else:
             sys.exit(VERDICT['WRONG'])
@@ -369,8 +581,8 @@ def main():
         debug(f"Unexpected error: {str(e)}")
         print(json.dumps({
             'status': 'error',
-            'message': str(e),
-            'verdict': 'Runtime Error'
+            'verdict': 'Runtime Error',
+            'message': str(e)
         }))
         sys.exit(VERDICT['RTE'])
     finally:
