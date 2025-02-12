@@ -50,8 +50,8 @@ struct ListNode* addTwoNumbers(struct ListNode* l1, struct ListNode* l2) {
 }
 
 int main() {
-    freopen("in", "r", stdin);
-    freopen("out", "w", stdout);
+    // freopen("in", "r", stdin);
+    // freopen("out", "w", stdout);
 
     int T;
     scanf("%d", &T);
