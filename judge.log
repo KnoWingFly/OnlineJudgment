@@ -1,0 +1,10 @@
+2025-02-15 00:00:53,382 - DEBUG - Judge script started
+2025-02-15 00:00:53,383 - DEBUG - Processing submission: /home/wian/Documents/OnlineJudgment/code/admin/1/Main.java for problem 1
+2025-02-15 00:00:53,383 - DEBUG - Starting compilation of /home/wian/Documents/OnlineJudgment/code/admin/1/Main.java
+2025-02-15 00:00:53,383 - DEBUG - Successfully wrote wrapped code to /home/wian/Documents/OnlineJudgment/code/admin/1/Main.java
+2025-02-15 00:00:53,383 - DEBUG - Running compilation command: javac /home/wian/Documents/OnlineJudgment/code/admin/1/Main.java
+2025-02-15 00:00:53,985 - DEBUG - Starting solution execution with sourcefile: /home/wian/Documents/OnlineJudgment/code/admin/1/Main.java
+2025-02-15 00:00:53,985 - DEBUG - Working directory: /home/wian/Documents/OnlineJudgment/code/admin/1
+2025-02-15 00:00:53,985 - DEBUG - Running command: java -cp /home/wian/Documents/OnlineJudgment/code/admin/1 Main
+2025-02-15 00:00:54,129 - DEBUG - Execution completed in 0.144 seconds
+2025-02-15 00:00:54,129 - DEBUG - Starting output comparison

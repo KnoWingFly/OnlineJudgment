@@ -1,5 +1,5 @@
 <?php
-// Start by clearing any output and setting error handling
+// Enable error reporting for debugging
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ob_clean();
@@ -8,7 +8,7 @@ header('Content-Type: application/json');
 session_start();
 if (!isset($_SESSION['isloggedin'])) {
     header("Location: login.php");
-    exit(0);
+    exit;
 }
 
 $username = $_SESSION['username'];
@@ -21,222 +21,94 @@ ini_set('log_errors', 1);
 ini_set('error_log', __DIR__ . '/php_errors.log');
 error_log("Starting submission processing");
 
-// Constants for verdicts (should match the ones in onj)
-define('VERDICT', [
+// Constants for verdicts
+const VERDICT = [
     'CORRECT' => 0,
     'COMPILE_ERROR' => 1,
     'WRONG' => 2,
     'TIME_EXCEEDED' => 3,
     'ILLEGAL_FILE' => 4,
     'RTE' => 5
-]);
+];
 
-function convertToWSLPath($windowsPath)
-{
-    $path = preg_replace('/^[A-Z]:/i', '', $windowsPath);
-    $path = str_replace('\\', '/', $path);
-    return "/mnt/c" . $path;
-}
-
-function preventDuplicateSubmission($db, $userid, $problemid)
-{
-    $currentTime = time();
-    $timeThreshold = $currentTime - 5;
-
-    $stmt = $db->prepare("SELECT id FROM submissions WHERE userid = ? AND problemid = ? AND time > ?");
-    $stmt->bind_param("iii", $userid, $problemid, $timeThreshold);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    return $result->num_rows > 0;
-}
-
-function updateScoreAndRank($db, $userid, $problemid)
-{
-    try {
-        // Start transaction
-        $db->begin_transaction();
-
-        // Check if problem was already solved
-        $stmt = $db->prepare("SELECT id FROM submissions WHERE userid = ? AND problemid = ? AND status = 0");
-        $stmt->bind_param("ii", $userid, $problemid);
-        $stmt->execute();
-        $result = $stmt->get_result();
-
-        if ($result->num_rows > 0) {
-            $db->commit();
-            return false; // Already solved
-        }
-
-        // Calculate total solved problems and update score dynamically
-        $updateScore = "
-        UPDATE users u 
-        SET u.score = (
-            SELECT COUNT(DISTINCT s.problemid)
-            FROM submissions s
-            WHERE s.userid = ? AND s.status = 0
-        )
-        WHERE u.id = ?";
-
-        $stmt = $db->prepare($updateScore);
-        $stmt->bind_param("ii", $userid, $userid);
-        if (!$stmt->execute()) {
-            throw new Exception("Failed to update score: " . $stmt->error);
-        }
-
-        // Reset rank counter
-        if (!$db->query("SET @rank = 0")) {
-            throw new Exception("Failed to initialize rank variable");
-        }
-
-        // Update all ranks
-        $updateRanks = "
-            UPDATE users u
-            JOIN (
-                SELECT id,
-                    @rank := @rank + 1 as new_rank
-                FROM users
-                ORDER BY score DESC, id ASC
-            ) r ON u.id = r.id
-            SET u.ranks = r.new_rank";
-
-        if (!$db->query($updateRanks)) {
-            throw new Exception("Failed to update ranks");
-        }
-
-        $db->commit();
-        return true;
-
-    } catch (Exception $e) {
-        $db->rollback();
-        error_log("Score update error: " . $e->getMessage());
-        throw $e;
+// Ensure a valid problem ID exists
+$problemid = -1;
+foreach ($_FILES as $key => $value) {
+    if (is_numeric($key)) {
+        $problemid = (int) filter_var($key, FILTER_SANITIZE_NUMBER_INT);
+        break;
     }
+}
+
+if ($problemid === -1) {
+    exit(json_encode(['verdict' => VERDICT['RTE'], 'message' => 'Invalid problem ID']));
 }
 
 try {
-    $problemid = -1;
-    foreach ($_FILES as $key => $value) {
-        if (is_numeric($key)) {
-            $problemid = (int) $key;
-            break;
-        }
-    }
-
-    if ($problemid === -1) {
-        throw new Exception("No valid problem ID found in submission");
-    }
-
-    // Connect using mysqli
+    // Establish database connection
+    mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
     $db = new mysqli('localhost', $DBUSER, $DBPASS, $DBNAME);
-    if ($db->connect_error) {
-        throw new Exception("Database connection failed: " . $db->connect_error);
+
+    // Prevent duplicate submissions (limit 5s interval)
+    $timeThreshold = time() - 5;
+    $stmt = $db->prepare("SELECT id FROM submissions WHERE userid = ? AND problemid = ? AND time > ?");
+    $stmt->bind_param("iii", $userid, $problemid, $timeThreshold);
+    $stmt->execute();
+    if ($stmt->get_result()->num_rows > 0) {
+        exit(json_encode(['verdict' => VERDICT['RTE'], 'message' => 'Wait 5 seconds between submissions']));
     }
 
-    if (preventDuplicateSubmission($db, $userid, $problemid)) {
-        while (ob_get_level()) {
-            ob_end_clean();
-        }
-        echo json_encode([
-            'verdict' => VERDICT['RTE'],
-            'problemid' => $problemid,
-            'message' => 'Please wait 5 seconds between submissions'
-        ]);
-        exit;
-    }
+    // Define directories
+    $baseDir = __DIR__;
+    $userDir = "$baseDir/code/$username/";
+    $uploadDir = "$userDir$problemid/";
 
-    // Get current directory and paths
-    $baseDir = dirname(__FILE__);
-    $wslBaseDir = convertToWSLPath($baseDir);
-    $userDir = $wslBaseDir . "/code/$username/";
-    $uploadDir = $userDir . $problemid . "/";
-
-    // Create directories if they don't exist
-    foreach ([$wslBaseDir . "/code", $userDir, $uploadDir] as $dir) {
-        if (!file_exists($dir)) {
-            if (!mkdir($dir, 0755, true)) {
-                error_log("Failed to create directory: $dir");
-                throw new Exception("Failed to create directory: $dir");
-            }
+    // Ensure required directories exist
+    foreach ([$baseDir . "/code", $userDir, $uploadDir] as $dir) {
+        if (!file_exists($dir) && !mkdir($dir, 0755, true)) {
+            error_log("Failed to create directory: $dir");
+            throw new Exception("Failed to create directory: $dir");
         }
     }
 
-    // Validate and process uploaded file
+    // Process uploaded file
     if (isset($_FILES[$problemid]) && $_FILES[$problemid]["error"] === UPLOAD_ERR_OK) {
-        // Create timestamp for unique filename
         $timestamp = date('Y-m-d_H-i-s');
         $originalName = basename($_FILES[$problemid]["name"]);
         $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
 
-        // Validate the file extension
         if (!in_array($ext, ['c', 'cpp', 'py', 'java', 'go'])) {
-            throw new Exception("Invalid file type. Only .c, .cpp, .py, .java, and .go files are allowed.");
+            throw new Exception("Invalid file type. Allowed: .c, .cpp, .py, .java, .go");
         }
 
-        // Special handling for Java files
-        if ($ext === 'java') {
-            // For Java files, always use original name but save a timestamped copy
-            $filename = "Main.java";  // Always use Main.java as the judge expects
+        $filename = ($ext === 'java') ? "Main.java" : pathinfo($originalName, PATHINFO_FILENAME) . "_$timestamp.$ext";
+        $destFile = "$uploadDir$filename";
 
-            $archiveDir = $uploadDir . "archive/";
-            if (!file_exists($archiveDir)) {
-                mkdir($archiveDir, 0755, true);
-            }
-
-            // Save an archived copy with timestamp
-            $archiveFile = $archiveDir . "Main_" . $timestamp . ".java";
-            if (!copy($_FILES[$problemid]["tmp_name"], $archiveFile)) {
-                error_log("Failed to save archive copy: $archiveFile");
-            }
-        } else {
-            $filename = pathinfo($originalName, PATHINFO_FILENAME) . "_" . $timestamp . "." . $ext;
+        if (!move_uploaded_file($_FILES[$problemid]["tmp_name"], $destFile)) {
+            throw new Exception("File upload failed.");
         }
+        chmod($destFile, 0644);
 
-        $destFile = $uploadDir . $filename;
-        $windowsDestFile = $baseDir . "/code/$username/$problemid/" . $filename;
-
-        // Create the Windows directory structure if it doesn't exist
-        $windowsUploadDir = $baseDir . "/code/$username/$problemid/";
-        if (!file_exists($windowsUploadDir)) {
-            mkdir($windowsUploadDir, 0755, true);
-        }
-
-        // Move uploaded file to destination
-        if (!move_uploaded_file($_FILES[$problemid]["tmp_name"], $windowsDestFile)) {
-            throw new Exception("Failed to move uploaded file");
-        }
-
-        // Set file permissions
-        chmod($windowsDestFile, 0644);
-
-        // Create a shell script to set up the environment and run the command
+        // Prepare and execute shell script
+        $scriptPath = "$baseDir/temp_script_" . uniqid() . ".sh";
         $shellScript = "#!/bin/bash\n";
         $shellScript .= "export PATH=/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\n";
         $shellScript .= "./onj " . escapeshellarg($destFile) . " " . $problemid . " 2>&1\n";
-
-        // Save the shell script
-        $scriptPath = $baseDir . "/temp_script_" . uniqid() . ".sh";
         file_put_contents($scriptPath, $shellScript);
         chmod($scriptPath, 0755);
 
-        // Convert script path to WSL format
-        $wslScriptPath = convertToWSLPath($scriptPath);
-
-        // Execute the shell script through WSL
-        $cmd = "wsl bash " . escapeshellarg($wslScriptPath);
-
-        // Execute command and capture output
+        // Execute script and process output
+        $cmd = "bash " . escapeshellarg($scriptPath);
         $output = [];
         $returncode = -1;
         exec($cmd, $output, $returncode);
+        unlink($scriptPath);
 
-        // Initialize variables
-        $judgeOutput = null;
         $executionTime = 0.0;
+        $judgeOutput = null;
 
-        // Process the judge output
         if (!empty($output)) {
             $lastOutput = end($output);
-            // Try to parse the JSON output from the judge
             $decodedOutput = json_decode($lastOutput, true);
             if (json_last_error() === JSON_ERROR_NONE) {
                 $judgeOutput = $decodedOutput;
@@ -246,86 +118,45 @@ try {
             }
         }
 
-        // Clean up the temporary script
-        unlink($scriptPath);
-
-        // Get current time
+        // Store submission record
         $currentTime = time();
-
-        // Insert submission record
         $stmt = $db->prepare("INSERT INTO submissions (userid, problemid, status, time, execution_time, filename) VALUES (?, ?, ?, ?, ?, ?)");
         $stmt->bind_param("iiiids", $userid, $problemid, $returncode, $currentTime, $executionTime, $filename);
+        $stmt->execute();
 
-        if (!$stmt->execute()) {
-            throw new Exception("Failed to insert submission: " . $stmt->error);
-        }
-
-        // Update score if submission is correct
+        // Update score if correct
         $scoreUpdated = false;
-        $newScore = 0;
-        $newRank = 0;
-
         if ($returncode === VERDICT['CORRECT']) {
-            $scoreUpdated = updateScoreAndRank($db, $userid, $problemid);
-
-            // Get updated score and rank
-            $stmt = $db->prepare("SELECT score, ranks FROM users WHERE id = ?");
-            $stmt->bind_param("i", $userid);
+            $db->begin_transaction();
+            $stmt = $db->prepare("SELECT id FROM submissions WHERE userid = ? AND problemid = ? AND status = 0");
+            $stmt->bind_param("ii", $userid, $problemid);
             $stmt->execute();
-            $result = $stmt->get_result();
-            $userInfo = $result->fetch_assoc();
-            $newScore = $userInfo['score'];
-            $newRank = $userInfo['ranks'];
+            if ($stmt->get_result()->num_rows === 0) {
+                $stmt = $db->prepare("UPDATE users SET score = (SELECT COUNT(DISTINCT problemid) FROM submissions WHERE userid = ? AND status = 0) WHERE id = ?");
+                $stmt->bind_param("ii", $userid, $userid);
+                $stmt->execute();
+                $scoreUpdated = true;
+            }
+            $db->commit();
         }
 
-        // Clean any output buffers before sending response
-        while (ob_get_level()) {
-            ob_end_clean();
-        }
-
-        // Set headers for JSON response
-        header('Content-Type: application/json');
-        header('Cache-Control: no-cache, must-revalidate');
-        header('Expires: Mon, 26 Jul 1997 05:00:00 GMT');
-
-        // Prepare and send the response
-        $response = [
+        // Send response
+        echo json_encode([
             'verdict' => $returncode,
             'problemid' => $problemid,
             'execution_time' => $executionTime,
             'time' => $currentTime,
             'readable_time' => date('Y-m-d H:i:s', $currentTime),
             'score_updated' => $scoreUpdated,
-            'new_score' => $newScore,
-            'new_rank' => $newRank
-        ];
-
-        // Include judge output if it exists
-        if ($judgeOutput !== null) {
-            $response['output'] = $judgeOutput;
-        }
-
-        echo json_encode($response);
-        $db->close();
-        exit;
-
+            'output' => $judgeOutput
+        ]);
     }
 } catch (Exception $e) {
-    // Clean output buffers
-    while (ob_get_level()) {
-        ob_end_clean();
-    }
-
-    // Log the error
     error_log("Submission Error: " . $e->getMessage());
-
-    // Send error response as JSON
-    header('Content-Type: application/json');
     echo json_encode([
         'verdict' => VERDICT['RTE'],
-        'problemid' => isset($problemid) ? $problemid : -1,
-        'message' => 'System error occurred: ' . $e->getMessage()
+        'problemid' => $problemid,
+        'message' => 'System error: ' . $e->getMessage()
     ]);
-    exit;
 }
 ?>
