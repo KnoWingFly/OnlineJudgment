@@ -80,23 +80,27 @@ import sys
 {solution_code}
 
 def main():
-    # Read number of test cases
-    T = int(input())
-    
-    # Process each test case
-    for t in range(1, T + 1):
-        # Read and echo case marker
-        marker = input().strip()
-        print(marker)
-        
-        # Call the solve function for this test case
-        solve()
+    try:
+        T = int(input())
+        for t in range(1, T + 1):
+            # Print the case marker if present
+            marker = input().strip()
+            print(marker)
+            
+            # Call the user's solve function
+            solve()
+            
+    except EOFError:
+        pass
+    except ValueError as e:
+        print(f"Input error: {{str(e)}}")
+    except Exception as e:
+        print(f"Error: {{str(e)}}")
 
 if __name__ == "__main__":
     main()
 ''',
-
-'java': '''
+            'java': '''
 import java.util.*;
 
 {solution_code}
@@ -112,10 +116,22 @@ class Main {{
             for(int t = 1; t <= T; t++) {{
                 String marker = scanner.nextLine();
                 System.out.println(marker);
-                if (marker.startsWith("=== Case")) {{
+                
+                // Skip empty lines and case markers
+                while (marker.startsWith("===") || marker.trim().isEmpty()) {{
+                    if (scanner.hasNextLine()) {{
+                        marker = scanner.nextLine();
+                    }} else {{
+                        break;
+                    }}
+                }}
+                
+                if (!marker.startsWith("===")) {{
                     Solution.solve();
                 }}
             }}
+        }} catch (Exception e) {{
+            System.err.println("Error: " + e.getMessage());
         }} finally {{
             scanner.close();
         }}
@@ -131,12 +147,22 @@ class Main {{
             abs_source_path = os.path.abspath(source_path)
             work_dir = os.path.dirname(abs_source_path)
             
-            with open(abs_source_path, 'r') as f:
-                user_code = f.read().strip()
+            # Create work_dir if it doesn't exist
+            os.makedirs(work_dir, exist_ok=True)
             
+            # Read the source file
+            try:
+                with open(abs_source_path, 'r') as f:
+                    user_code = f.read().strip()
+            except Exception as e:
+                logging.debug(f"Error reading source file: {str(e)}")
+                return None
+            
+            # Get file extension
             ext = source_path.split('.')[-1].lower()
             if ext not in self.templates:
-                raise ValueError(f"Unsupported file extension: {ext}")
+                logging.debug(f"Unsupported file extension: {ext}")
+                return None
 
             # For Java, handle imports and class definitions
             if ext == 'java':
@@ -159,39 +185,45 @@ class Main {{
                     else:
                         code_lines.append(line)
                 
-                # Reconstruct solution code without the class definition
+                # Reconstruct solution code
                 solution_code_without_class = '\n'.join(solution_code)
                 
                 # Add user imports to template imports
                 template = self.templates[ext]
                 if import_lines:
-                    # Insert user imports after template imports
                     template_parts = template.split('\n', 1)
                     template = template_parts[0] + '\n' + '\n'.join(import_lines) + '\n' + template_parts[1]
 
-                # Create wrapped code
                 wrapped_code = template.format(
                     solution_code=user_code,
                     solution_code_without_class=solution_code_without_class
                 )
             else:
+                # For other languages, just wrap the code with the template
                 template = self.templates[ext]
                 wrapped_code = template.format(
                     solution_code=user_code
                 )
             
-            # For Java, always save as Main.java
+            # Determine output path
             if ext == 'java':
                 output_path = os.path.join(work_dir, "Main.java")
             else:
-                output_path = os.path.join(work_dir, f"{os.path.splitext(os.path.basename(source_path))[0]}_wrapped.{ext}")
+                output_name = f"{os.path.splitext(os.path.basename(source_path))[0]}_wrapped.{ext}"
+                output_path = os.path.join(work_dir, output_name)
             
-            with open(output_path, 'w') as f:
-                f.write(wrapped_code)
+            # Write the wrapped code
+            try:
+                with open(output_path, 'w') as f:
+                    f.write(wrapped_code)
+                logging.debug(f"Successfully wrote wrapped code to {output_path}")
+                return output_path
+            except Exception as e:
+                logging.debug(f"Error writing wrapped code: {str(e)}")
+                return None
                 
-            return output_path
         except Exception as e:
-            logging.debug(f"Error wrapping solution: {str(e)}")
+            logging.debug(f"Error in wrap_solution: {str(e)}")
             return None
 
 def debug(msg):
@@ -519,8 +551,8 @@ def main():
             sys.exit(VERDICT['ILLEGAL_FILE'])
 
         # Check problem files exist
-        infile = os.path.abspath(f"{PROBLEMDIR}/{problem}/in")
-        expected_file = os.path.abspath(f"{PROBLEMDIR}/{problem}/out")
+        infile = os.path.abspath(f"{PROBLEMDIR}/{problem}/in.txt")
+        expected_file = os.path.abspath(f"{PROBLEMDIR}/{problem}/out.txt")
         if not os.path.isfile(infile) or not os.path.isfile(expected_file):
             debug("Problem input/output files not found")
             print(json.dumps({

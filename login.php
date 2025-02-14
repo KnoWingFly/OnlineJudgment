@@ -145,12 +145,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
                 <input type="password" name="password" placeholder="Password" class="w-full p-2 mb-2 rounded bg-gray-700">
                 <button type="submit" name="login" class="w-full bg-purple-600 py-2 rounded">Login</button>
             </form>
-            <p class="text-center mt-4">
+            <!-- <p class="text-center mt-4">
                 <a id="showRegister" class="text-purple-400 hover:underline cursor-pointer">Create an account</a>
-            </p>
+            </p> -->
         </div>
 
-        <div id="registerSection" style="display: none;">
+        <!-- <div id="registerSection" style="display: none;">
             <h2 class="text-center text-xl font-bold mb-4">Register</h2>
             <?php if($registerMessage): ?>
                 <div class="<?= $registerSuccess ? 'bg-green-500' : 'bg-red-500'; ?> text-white p-3 rounded text-center mb-4">
@@ -177,7 +177,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['register'])) {
             <p class="text-center mt-4">
                 <a id="showLogin" class="text-purple-400 hover:underline cursor-pointer">Back to Login</a>
             </p>
-        </div>
+        </div> -->
     </div>
 
     <script>

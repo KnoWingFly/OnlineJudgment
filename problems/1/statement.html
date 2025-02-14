@@ -1,43 +1,50 @@
 <div class="problem-content space-y-8">
     <div class="text-blue-400">
-        <h1 class="text-3xl font-bold mb-6">1234</h1>
+        <h1 class="text-3xl font-bold mb-6">Max Score</h1>
     </div>
     
     <div class="bg-emerald-900/20 text-emerald-400 px-4 py-2 rounded-xl code-font text-sm inline-flex items-center gap-2">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
         </svg>
-        Time Limit: 1231234s
+        Time Limit: 3s
     </div>
-
-    
 
     <div class="space-y-6">
         <div class="text-blue-400">
             <h2 class="text-xl font-semibold mb-4 pb-2 border-b border-blue-400/30">Description</h2>
         </div>
-        <p class="text-gray-300 leading-relaxed">1231234</p>
+        <p class="text-gray-300 leading-relaxed">
+            Delphi really enjoys arithmetic and one day her teacher devised the following problem.
+            <br/><br/>
+            Given <code>n</code> integers <code>a1, a2, …, an</code> and a sum <code>s</code> initialized to <code>0</code>, Delphi has to perform the following operation for <code>i = 1, 2, …, n</code> in order:
+            <br/><br/>
+            Add <code>ai</code> to <code>s</code>, if the resulting <code>s</code> is even, Delphi earns 1 point and repeatedly divides <code>s</code> by 2 until <code>s</code> becomes odd.
+            <br/><br/>
+            Note that Delphi can earn at most 1 point per operation, regardless of how many divisions she does.
+            <br/><br/>
+            Since these divisions are considered more beneficial for Delphi’s development, her teacher wants to rearrange <code>a</code> so that the number of Delphi’s total points is maximized. Determine the maximum number of points Delphi can gain.
+        </p>
     </div>
 
     <div class="space-y-6">
         <div class="text-blue-400">
             <h2 class="text-xl font-semibold mb-4 pb-2 border-b border-blue-400/30">Input Format</h2>
         </div>
-        <p class="text-gray-300 leading-relaxed">1234</p>
+        <p class="text-gray-300 leading-relaxed">
+            The first line contains a single integer <code>n</code> (1 ≤ n ≤ 100), the number of integers.
+            <br/>
+            The second line contains <code>n</code> space-separated integers <code>a1, a2, …, an</code> (1 ≤ ai ≤ 10<sup>9</sup>).
+        </p>
     </div>
 
     <div class="space-y-6">
         <div class="text-blue-400">
             <h2 class="text-xl font-semibold mb-4 pb-2 border-b border-blue-400/30">Output Format</h2>
         </div>
-        <p class="text-gray-300 leading-relaxed">1234</p>
-    </div>
-
-    <div class="space-y-6">
-        <div class="text-blue-400">
-            <h2 class="text-xl font-semibold mb-4 pb-2 border-b border-blue-400/30">Constraints</h2>
-        </div>
-        <p class="text-gray-300 leading-relaxed">1234</p>
+        <p class="text-gray-300 leading-relaxed">
+            Output a single integer, which is the maximum number of points Delphi can gain.
+        </p>
     </div>
 
     <div class="space-y-6">
@@ -46,7 +53,19 @@
         </div>
         <div class="relative">
             <div class="bg-[#0A0A0A] text-gray-300 p-4 rounded-lg border border-[#1A1A1A] code-font text-sm">
-                <pre class="max-h-64 overflow-y-auto overflow-x-auto whitespace-pre">1234</pre>
+                <pre class="max-h-64 overflow-y-auto overflow-x-auto whitespace-pre">
+1
+1
+
+10
+3 1 4 1 2 5 9 6 3 5
+
+4
+1000000000 250 505 999999999
+
+5
+2 4 6 8 10
+                </pre>
             </div>
         </div>
     </div>
@@ -57,7 +76,15 @@
         </div>
         <div class="relative">
             <div class="bg-[#0A0A0A] text-gray-300 p-4 rounded-lg border border-[#1A1A1A] code-font text-sm">
-                <pre class="max-h-64 overflow-y-auto overflow-x-auto whitespace-pre">1234</pre>
+                <pre class="max-h-64 overflow-y-auto overflow-x-auto whitespace-pre">
+0
+
+8
+
+3
+
+1
+                </pre>
             </div>
         </div>
     </div>
