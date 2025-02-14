@@ -13,7 +13,6 @@
 	?>
 
 	var getLeaderInterval = <?php echo $getLeaderInterval; ?>;
-	var getChatInterval = <?php echo $getChatInterval; ?>;
 	var scoreUpdateInterval = 5000;
 
 	var diff1 = startTime - currentTime;

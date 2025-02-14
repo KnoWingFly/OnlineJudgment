@@ -208,6 +208,38 @@ if (isset($_GET['mode']) && $_GET['mode'] == 'getFullDetails') {
     <?php include('timer.php'); ?>
 
     <script type="text/javascript">
+
+        function switchTestCase(caseIndex, button) {
+            // Get all test cases data
+            const testCasesData = JSON.parse(document.getElementById('test-cases-data').dataset.cases);
+            const testCase = testCasesData[caseIndex];
+
+            // Update tab styling
+            document.querySelectorAll('.test-case-tab').forEach(tab => {
+                tab.classList.remove('bg-slate-800', 'text-white');
+                tab.classList.add('text-gray-400');
+            });
+            button.classList.add('bg-slate-800', 'text-white');
+            button.classList.remove('text-gray-400');
+
+            // Update content
+            document.getElementById('case-input').textContent = testCase.input;
+            document.getElementById('case-expected').textContent = testCase.expected;
+            document.getElementById('case-actual').textContent = testCase.actual;
+
+            // Update status panel
+            const statusPanel = document.getElementById('case-status');
+            statusPanel.className = `mt-4 py-3 px-4 rounded-lg ${testCase.isCorrect ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`;
+            statusPanel.innerHTML = `
+        <div class="flex items-center gap-2">
+            <span class="text-xl">${testCase.isCorrect ? '✓' : '×'}</span>
+            <span class="font-medium">
+                ${testCase.isCorrect ? 'Correct Answer' : 'Wrong Answer'}
+            </span>
+        </div>
+    `;
+        }
+        
         $(document).ready(function () {
             $('.uploadform').on('submit', function (e) {
                 e.preventDefault(); // Prevent default form submission behavior
@@ -258,76 +290,166 @@ if (isset($_GET['mode']) && $_GET['mode'] == 'getFullDetails') {
             function generateSubmissionResultHtml(response) {
                 const verdictClass = response.verdict === 0 ? 'accepted' : 'wrong';
                 const verdictText = getVerdictText(response.verdict);
-                const output = response.output || {};
+
+                // Parse test cases from input and outputs
+                const testCases = parseTestCases(response.output);
 
                 return `
-        <div class="submission-result space-y-6">
-            <!-- Verdict Header -->
-            <div class="verdict-header ${verdictClass}">
-                <h2 class="text-xl font-semibold mb-4 pb-2 border-b ${verdictClass === 'accepted' ? 'border-emerald-400/30 text-emerald-400' : 'border-rose-400/30 text-rose-400'}">
-                    ${verdictText}
-                </h2>
+    <div class="submission-result space-y-6">
+        <!-- Verdict Header -->
+        <div class="verdict-header ${verdictClass}">
+            <h2 class="text-xl font-semibold mb-4 pb-2 border-b ${verdictClass === 'accepted' ? 'border-emerald-400/30 text-emerald-400' : 'border-rose-400/30 text-rose-400'}">
+                ${verdictText}
+            </h2>
+        </div>
+
+        <!-- Test Cases Navigator -->
+        <div class="test-cases-container">
+            <!-- Test Case Tabs -->
+            <div class="flex space-x-2 mb-4 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-600">
+                ${testCases.map((testCase, index) => `
+                    <button 
+                        class="test-case-tab px-4 py-2 rounded-lg text-sm font-medium min-w-[100px] transition-colors
+                        ${index === 0 ? 'bg-slate-800 text-white' : 'text-gray-400 hover:bg-slate-800/50'}"
+                        data-case="${index}"
+                        onclick="switchTestCase(${index}, this)">
+                        Case ${index + 1}
+                        <span class="ml-2 ${testCase.isCorrect ? 'text-emerald-400' : 'text-rose-400'}">
+                            ${testCase.isCorrect ? '✓' : '×'}
+                        </span>
+                    </button>
+                `).join('')}
             </div>
-                
-            <!-- Test Input Section -->
-            <div class="result-section">
-                <div class="text-blue-400">
-                    <h3 class="text-sm font-semibold mb-2 uppercase tracking-wider">Test Input</h3>
+
+            <!-- Result Panels -->
+            <div class="space-y-4">
+                <!-- Input Panel -->
+                <div class="space-y-2">
+                    <h3 class="text-sm font-semibold text-blue-400 uppercase tracking-wider">Input</h3>
+                    <div class="bg-[#0A0A0A] p-4 rounded-lg border border-[#1A1A1A]">
+                        <pre id="case-input" class="code-font text-sm text-gray-300 whitespace-pre-wrap">${escapeHtml(testCases[0].input)}</pre>
+                    </div>
                 </div>
-                <div class="bg-[#0A0A0A] text-gray-300 p-4 rounded-lg border border-[#1A1A1A] overflow-hidden">
-                    <div class="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent hover:scrollbar-thumb-gray-500 max-h-[300px]">
-                        <pre class="code-font text-sm whitespace-pre min-w-min">${escapeHtml(output.input || 'No input provided')}</pre>
+
+                <!-- Expected Output Panel -->
+                <div class="space-y-2">
+                    <h3 class="text-sm font-semibold text-blue-400 uppercase tracking-wider">Expected Output</h3>
+                    <div class="bg-[#0A0A0A] p-4 rounded-lg border border-[#1A1A1A]">
+                        <pre id="case-expected" class="code-font text-sm text-gray-300 whitespace-pre-wrap">${escapeHtml(testCases[0].expected)}</pre>
+                    </div>
+                </div>
+
+                <!-- Your Output Panel -->
+                <div class="space-y-2">
+                    <h3 class="text-sm font-semibold text-blue-400 uppercase tracking-wider">Your Output</h3>
+                    <div class="bg-[#0A0A0A] p-4 rounded-lg border border-[#1A1A1A]">
+                        <pre id="case-actual" class="code-font text-sm text-gray-300 whitespace-pre-wrap">${escapeHtml(testCases[0].actual)}</pre>
+                    </div>
+                </div>
+
+                <!-- Status Panel -->
+                <div id="case-status" class="mt-4 py-3 px-4 rounded-lg ${testCases[0].isCorrect ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xl">${testCases[0].isCorrect ? '✓' : '×'}</span>
+                        <span class="font-medium">
+                            ${testCases[0].isCorrect ? 'Correct Answer' : 'Wrong Answer'}
+                        </span>
                     </div>
                 </div>
             </div>
-                
-            <!-- Expected Output Section -->
-            <div class="result-section">
-                <div class="text-blue-400">
-                    <h3 class="text-sm font-semibold mb-2 uppercase tracking-wider">Expected Output</h3>
-                </div>
-                <div class="bg-[#0A0A0A] text-gray-300 p-4 rounded-lg border border-[#1A1A1A] overflow-hidden">
-                    <div class="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent hover:scrollbar-thumb-gray-500 max-h-[300px]">
-                        <pre class="code-font text-sm whitespace-pre min-w-min">${escapeHtml(output.expected || 'No expected output provided')}</pre>
-                    </div>
-                </div>
-            </div>
-                
-            <!-- Actual Output Section -->
-            <div class="result-section">
-                <div class="text-blue-400">
-                    <h3 class="text-sm font-semibold mb-2 uppercase tracking-wider">Your Output</h3>
-                </div>
-                <div class="bg-[#0A0A0A] text-gray-300 p-4 rounded-lg border border-[#1A1A1A] overflow-hidden">
-                    <div class="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent hover:scrollbar-thumb-gray-500 max-h-[300px]">
-                        <pre class="code-font text-sm whitespace-pre min-w-min">${escapeHtml(output.actual || 'No output provided')}</pre>
-                    </div>
-                </div>
-            </div>
-                
-            <!-- Execution Info -->
-            <div class="execution-info text-sm text-gray-400 mt-4 flex items-center gap-4">
-                <span>⏱ ${parseFloat(response.execution_time || 0).toFixed(3)}s</span>
-                ${response.memory_usage ? `<span>💾 ${response.memory_usage}MB</span>` : ''}
-            </div>
-        </div>`;
+        </div>
+
+        <!-- Hidden Data Storage -->
+        <div id="test-cases-data" class="hidden" data-cases='${JSON.stringify(testCases)}'></div>
+
+        <!-- Execution Info -->
+        <div class="execution-info text-sm text-gray-400 mt-4 flex items-center gap-4">
+            <span>⏱ ${parseFloat(response.execution_time || 0).toFixed(3)}s</span>
+            ${response.memory_usage ? `<span>💾 ${response.memory_usage}MB</span>` : ''}
+        </div>
+    </div>`;
             }
 
-            function getVerdictText(verdict) {
-                switch (verdict) {
-                    case 0:
-                        return 'Accepted';
-                    case 1:
-                        return 'Compilation Error';
-                    case 2:
-                        return 'Wrong Answer';
-                    case 3:
-                        return 'Time Limit Exceeded';
-                    case 5:
-                        return 'Runtime Error';
-                    default:
-                        return 'Unknown Verdict';
+            function parseTestCases(output) {
+                if (!output) return [];
+
+                const testCases = [];
+                const lines = output.input.split('\n');
+                let currentCase = null;
+                let caseLines = [];
+
+                // Parse input into separate test cases
+                for (let line of lines) {
+                    if (line.startsWith('=== Case')) {
+                        if (currentCase !== null) {
+                            testCases.push({
+                                input: caseLines.join('\n'),
+                                caseNumber: currentCase
+                            });
+                            caseLines = [];
+                        }
+                        currentCase = parseInt(line.match(/Case (\d+)/)[1]);
+                    } else if (currentCase !== null) {
+                        caseLines.push(line);
+                    }
                 }
+                if (caseLines.length > 0 && currentCase !== null) {
+                    testCases.push({
+                        input: caseLines.join('\n'),
+                        caseNumber: currentCase
+                    });
+                }
+
+                // Parse expected and actual outputs
+                const expectedLines = output.expected.split('\n');
+                const actualLines = output.actual.split('\n');
+
+                let currentExpected = [];
+                let currentActual = [];
+
+                for (let i = 0; i < testCases.length; i++) {
+                    currentExpected = [];
+                    currentActual = [];
+
+                    // Find the corresponding output sections
+                    let startIdx = expectedLines.findIndex(line =>
+                        line.includes(`=== Case ${testCases[i].caseNumber} ===`)
+                    );
+                    let endIdx = expectedLines.findIndex((line, idx) =>
+                        idx > startIdx && line.includes('=== Case')
+                    );
+                    if (endIdx === -1) endIdx = expectedLines.length;
+
+                    // Extract expected output
+                    for (let j = startIdx + 1; j < endIdx; j++) {
+                        if (expectedLines[j].trim()) {
+                            currentExpected.push(expectedLines[j]);
+                        }
+                    }
+
+                    // Find actual output section
+                    startIdx = actualLines.findIndex(line =>
+                        line.includes(`=== Case ${testCases[i].caseNumber} ===`)
+                    );
+                    endIdx = actualLines.findIndex((line, idx) =>
+                        idx > startIdx && line.includes('=== Case')
+                    );
+                    if (endIdx === -1) endIdx = actualLines.length;
+
+                    // Extract actual output
+                    for (let j = startIdx + 1; j < endIdx; j++) {
+                        if (actualLines[j].trim()) {
+                            currentActual.push(actualLines[j]);
+                        }
+                    }
+
+                    // Add outputs to test case
+                    testCases[i].expected = currentExpected.join('\n');
+                    testCases[i].actual = currentActual.join('\n');
+                    testCases[i].isCorrect = currentExpected.join('\n') === currentActual.join('\n');
+                }
+
+                return testCases;
             }
 
             function escapeHtml(unsafe) {
@@ -338,6 +460,17 @@ if (isset($_GET['mode']) && $_GET['mode'] == 'getFullDetails') {
                     .replace(/>/g, '&gt;')
                     .replace(/"/g, '&quot;')
                     .replace(/'/g, '&#039;');
+            }
+
+            function getVerdictText(verdict) {
+                switch (verdict) {
+                    case 0: return 'Accepted';
+                    case 1: return 'Compilation Error';
+                    case 2: return 'Wrong Answer';
+                    case 3: return 'Time Limit Exceeded';
+                    case 5: return 'Runtime Error';
+                    default: return 'Unknown Verdict';
+                }
             }
 
             // Example of edit functionality
