@@ -134,6 +134,18 @@
             <?php endif; ?>
         </div>
     </div>
+</div>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        // Clear status when new file is selected
+        $('input[type="file"]').change(function () {
+            var problemId = $(this).attr('name');
+            $('#status' + problemId)
+                .removeClass()
+                .addClass('mt-4 text-sm font-medium text-gray-100')
+                .html('<div class="flex items-center"><svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>Ready to submit</div>');
+        });
 
     <script type="text/javascript">
         $(document).ready(function () {
@@ -141,85 +153,71 @@
             $('input[type="file"]').change(function () {
                 var problemId = $(this).attr('name');
                 $('#status' + problemId)
-                    .removeClass()
-                    .addClass('mt-4 text-lg font-semibold text-gray-100')
-                    .html('<strong>Ready to submit</strong>');
-            });
 
-            // Initialize form submission handling
-            $('.uploadform').ajaxForm({
-                dataType: 'json',
-                beforeSubmit: function (arr, $form, options) {
-                    var problemId = $form.find('input[type="file"]').attr('name');
-                    $('#status' + problemId)
-                        .removeClass()
-                        .addClass('mt-4 text-lg font-semibold text-[#1E1E1E]')
-                        .html('<strong>Submitting...</strong>');
-                    return true;
-                },
-                success: function (response) {
-                    if (!response || typeof response.verdict === 'undefined') {
-                        throw new Error('Invalid response from server');
-                    }
+                    .html(`
+                    <div class="flex items-center text-blue-400">
+                        <svg class="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                        </svg>
+                        <span>Submitting...</span>
+                    </div>
+                `);
+                return true;
+            },
+            success: function (response) {
+                if (!response || typeof response.verdict === 'undefined') {
+                    throw new Error('Invalid response from server');
+                }
 
-                    var status = $('#status' + response.problemid);
-                    var statusClass;
-                    var statusText;
+                var status = $('#status' + response.problemid);
+                var statusClass;
+                var statusText;
 
-                    switch (parseInt(response.verdict)) {
-                        case 0: // VERDICT_CORRECT
-                            statusClass = 'text-green-400';
-                            statusText = 'Accepted';
-                            break;
-                        case 1: // VERDICT_COMPILE_ERROR
-                            statusClass = 'text-red-400';
-                            statusText = 'Compile Error';
-                            break;
-                        case 2: // VERDICT_WRONG
-                            statusClass = 'text-yellow-400';
-                            statusText = 'Wrong Answer';
-                            break;
-                        case 3: // VERDICT_TIME_EXCEEDED
-                            statusClass = 'text-orange-400';
-                            statusText = 'Time Limit';
-                            break;
-                        case 4: // VERDICT_ILLEGAL_FILE
-                            statusClass = 'text-purple-400';
-                            statusText = 'Invalid File';
-                            break;
-                        case 5: // VERDICT_RTE
-                            statusClass = 'text-pink-400';
-                            statusText = response.message || 'Runtime Error';
-                            break;
-                        case 6: // System Error
-                            statusClass = 'text-red-400';
-                            statusText = response.message || 'System Error';
-                            break;
-                        default:
-                            statusClass = 'text-red-400';
-                            statusText = 'Unknown Error';
-                    }
+                switch (parseInt(response.verdict)) {
+                    case 0: // VERDICT_CORRECT
+                        statusClass = 'text-green-400';
+                        statusText = 'Accepted';
+                        break;
+                    case 1: // VERDICT_COMPILE_ERROR
+                        statusClass = 'text-red-400';
+                        statusText = 'Compile Error';
+                        break;
+                    case 2: // VERDICT_WRONG
+                        statusClass = 'text-yellow-400';
+                        statusText = 'Wrong Answer';
+                        break;
+                    case 3: // VERDICT_TIME_EXCEEDED
+                        statusClass = 'text-orange-400';
+                        statusText = 'Time Limit';
+                        break;
+                    case 4: // VERDICT_ILLEGAL_FILE
+                        statusClass = 'text-purple-400';
+                        statusText = 'Invalid File';
+                        break;
+                    case 5: // VERDICT_RTE
+                        statusClass = 'text-pink-400';
+                        statusText = response.message || 'Runtime Error';
+                        break;
+                    case 6: // System Error
+                        statusClass = 'text-red-400';
+                        statusText = response.message || 'System Error';
+                        break;
+                    default:
+                        statusClass = 'text-red-400';
+                        statusText = 'Unknown Error';
+                }
 
-                    status.removeClass()
-                        .addClass('mt-4 text-sm font-medium ' + statusClass)
-                        .html('<div class="flex items-center"><svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg><strong>' + statusText + '</strong></div>');
+                status.removeClass()
+                    .addClass('mt-4 text-sm font-medium ' + statusClass)
+                    .html('<div class="flex items-center"><svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg><strong>' + statusText + '</strong></div>');
 
-                    if (response.execution_time) {
-                        status.append('<br>Time: ' + response.execution_time + 's');
-                    }
+                if (response.execution_time) {
+                    status.append('<br>Time: ' + response.execution_time + 's');
+                }
 
-                    if (response.output) {
-                        console.log('Submission output:', response.output);
-                    }
-                },
-                error: function (xhr, status, error) {
-                    var problemId = $(this).find('input[type="file"]').attr('name');
-                    $('#status' + problemId)
-                        .removeClass()
-                        .addClass('mt-4 text-lg font-semibold text-red-600')
-                        .html('<strong>Submission Error</strong><br>' + error);
-                    console.error('Submission error:', error);
-                    console.error('XHR:', xhr.responseText);
+                if (response.output) {
+                    console.log('Submission output:', response.output);
                 }
             });
         });

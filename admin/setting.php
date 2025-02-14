@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_settings'])) {
         die("Connection failed: " . mysqli_connect_error());
     }
 
-    $allowed_settings = ['start_time', 'end_time', 'leader_interval', 'chat_interval'];
+    $allowed_settings = ['start_time', 'end_time', 'leader_interval'];
     $error = false;
 
     foreach ($allowed_settings as $key) {
@@ -58,7 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_settings'])) {
 
 function generateSettingsFile($cn)
 {
-    global $DBUSER, $DBPASS, $DBNAME, $points, $CODEDIR, $PROBLEMDIR;
+    global $DBUSER, $DBPASS, $DBNAME, $CODEDIR, $PROBLEMDIR;
 
     $result = mysqli_query($cn, "SELECT setting_key, setting_value FROM system_settings");
     $settings = [];
@@ -73,11 +73,9 @@ function generateSettingsFile($cn)
     $content .= "\$DBUSER = '$DBUSER';\n";
     $content .= "\$DBPASS = '$DBPASS';\n";
     $content .= "\$DBNAME = '$DBNAME';\n\n";
-    $content .= "\$points = array(" . implode(',', $points) . ");\n\n";
     $content .= "\$startTime = date_create('{$settings['start_time']}');\n";
     $content .= "\$endTime = date_create('{$settings['end_time']}');\n\n";
     $content .= "\$getLeaderInterval = {$settings['leader_interval']};\n";
-    $content .= "\$getChatInterval = {$settings['chat_interval']};\n\n";
     $content .= "ini_set('display_errors', false);\n\n";
     $content .= "\$time = date_create();\n";
     $content .= "\$running = \$time >= \$startTime && \$time <= \$endTime;\n";
@@ -91,8 +89,8 @@ function generateSettingsFile($cn)
 // Fetch current settings
 $cn = mysqli_connect('localhost', $DBUSER, $DBPASS, $DBNAME);
 $result = mysqli_query($cn, "SELECT setting_key, setting_value, setting_type FROM system_settings 
-                           WHERE setting_key IN ('start_time', 'end_time', 'leader_interval', 'chat_interval') 
-                           ORDER BY FIELD(setting_key, 'start_time', 'end_time', 'leader_interval', 'chat_interval')");
+                           WHERE setting_key IN ('start_time', 'end_time', 'leader_interval') 
+                           ORDER BY FIELD(setting_key, 'start_time', 'end_time', 'leader_interval')");
 $settings = mysqli_fetch_all($result, MYSQLI_ASSOC);
 mysqli_close($cn);
 ?>
