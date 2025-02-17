@@ -49,7 +49,8 @@ function saveUploadedFile($file, $problemId, $filename, $subdir = '')
     return true;
 }
 
-function generateStatement($title, $timeLimit, $inputFormat, $outputFormat, $sampleCases, $description, $constraints, $explanation, $imagePath = null) {
+function generateStatement($title, $timeLimit, $inputFormat, $outputFormat, $sampleCases, $description, $constraints, $explanation, $imagePath = null)
+{
     $imageSection = '';
 
     if ($imagePath) {
@@ -91,7 +92,7 @@ EOT;
         $input = htmlspecialchars($case['input']);
         $output = htmlspecialchars($case['output']);
         $exampleNum = $index + 1;
-        
+
         $samplesHtml .= <<<EOT
 <div class="space-y-6 mb-8">
     <div class="text-blue-400">
@@ -182,6 +183,92 @@ EOT;
 EOT;
 }
 
+function compileAndTest($problemId)
+{
+    $dir = realpath("../problems/" . $problemId . "/");
+    $output = array();
+    $returnVar = 0;
+
+    debug_log("Starting compilation and testing for problem $problemId");
+    debug_log("Working directory: $dir");
+
+    $wslDir = trim(shell_exec('wsl wslpath "' . $dir . '"'));
+    debug_log("WSL directory path: $wslDir");
+
+    if (!file_exists($dir . "/generator.cpp") || !file_exists($dir . "/solution.cpp")) {
+        debug_log("Required files missing");
+        return false;
+    }
+
+    $filesToHandle = ['in', 'out', 'generator', 'solution'];
+    foreach ($filesToHandle as $file) {
+        if (file_exists($dir . "/$file")) {
+            unlink($dir . "/$file");
+        }
+        if ($file === 'in' || $file === 'out') {
+            touch($dir . "/$file");
+            chmod($dir . "/$file", 0666);
+        }
+    }
+
+    $compileGeneratorCmd = 'wsl -e bash -c "cd \'' . $wslDir . '\' && g++ -std=c++11 generator.cpp -o generator"';
+    debug_log("Executing generator compilation: $compileGeneratorCmd");
+    exec($compileGeneratorCmd . " 2>&1", $output, $returnVar);
+    if ($returnVar !== 0) {
+        debug_log("Generator compilation failed: " . implode("\n", $output));
+        return false;
+    }
+
+    $runGeneratorCmd = 'wsl -e bash -c "cd \'' . $wslDir . '\' && chmod +x generator && ./generator > in"';
+    debug_log("Executing generator: $runGeneratorCmd");
+    exec($runGeneratorCmd . " 2>&1", $output, $returnVar);
+    if ($returnVar !== 0) {
+        debug_log("Generator execution failed: " . implode("\n", $output));
+        return false;
+    }
+
+    if (!file_exists($dir . "/in") || filesize($dir . "/in") === 0) {
+        debug_log("Input file is missing or empty after generator execution");
+        return false;
+    }
+
+    $compileSolutionCmd = 'wsl -e bash -c "cd \'' . $wslDir . '\' && g++ -std=c++11 solution.cpp -o solution"';
+    debug_log("Executing solution compilation: $compileSolutionCmd");
+    exec($compileSolutionCmd . " 2>&1", $output, $returnVar);
+    if ($returnVar !== 0) {
+        debug_log("Solution compilation failed: " . implode("\n", $output));
+        return false;
+    }
+
+    exec('wsl -e bash -c "cd \'' . $wslDir . '\' && chmod 666 in out && chmod +x solution"');
+
+    $runSolutionCmd = 'wsl -e bash -c "cd \'' . $wslDir . '\' && ./solution"';
+    debug_log("Executing solution: $runSolutionCmd");
+    exec($runSolutionCmd . " 2>&1", $output, $returnVar);
+
+    debug_log("Solution execution output: " . implode("\n", $output));
+
+    if ($returnVar !== 0) {
+        debug_log("Solution execution failed with return code: $returnVar");
+        return false;
+    }
+
+    if (!file_exists($dir . "/out")) {
+        debug_log("Output file does not exist after solution execution");
+        return false;
+    }
+
+    $outSize = filesize($dir . "/out");
+    if ($outSize === 0) {
+        debug_log("Output file is empty after solution execution");
+        return false;
+    }
+
+    debug_log("Compilation and testing completed successfully");
+    debug_log("Output file size: $outSize bytes");
+    return true;
+}
+
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     debug_log("Form submitted");
     try {
@@ -242,7 +329,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $_POST['explanation'],
             $imagePath
         );
-        
+
         file_put_contents($problemDir . "statement.html", $statementHtml);
         chmod($problemDir . "statement.html", 0666);
 
@@ -271,6 +358,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -292,7 +380,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         function addSampleCase() {
             const container = document.getElementById('sampleCases');
             const caseCount = container.getElementsByClassName('sample-case').length + 1;
-            
+
             const newCase = document.createElement('div');
             newCase.className = 'sample-case mb-6 p-4 bg-zinc-800 rounded-lg border border-zinc-700';
             newCase.innerHTML = `
@@ -317,7 +405,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     </div>
                 </div>
             `;
-            
+
             container.appendChild(newCase);
             updateCaseCount();
         }
@@ -348,6 +436,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     </script>
     <?php include('../timer.php'); ?>
 </head>
+
 <body class="bg-zinc-900 text-zinc-100 min-h-screen">
     <!-- Header -->
     <?php include('../Layout/header.php'); ?>
@@ -356,8 +445,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <!-- Main Content -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <?php if (isset($message)): ?>
-            <div class="mb-6 p-4 rounded-lg <?= strpos($message, 'Error') !== false ? 'bg-red-900/50 text-red-300' : 'bg-emerald-900/20 text-emerald-400' ?>">
-            <?= htmlspecialchars($message) ?>
+            <div
+                class="mb-6 p-4 rounded-lg <?= strpos($message, 'Error') !== false ? 'bg-red-900/50 text-red-300' : 'bg-emerald-900/20 text-emerald-400' ?>">
+                <?= htmlspecialchars($message) ?>
             </div>
         <?php endif; ?>
 
@@ -368,22 +458,29 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
                 <!-- Navigation Menu -->
                 <div class="mt-6 flex flex-wrap gap-4">
-                    <a href="problems.php" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    <a href="problems.php"
+                        class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                         </svg>
                         Add Problems
                     </a>
-                    <a href="delete-problems.php" class="inline-flex items-center px-4 py-2 bg-zinc-700 text-zinc-300 rounded-lg hover:bg-zinc-600 transition-colors">
+                    <a href="delete-problems.php"
+                        class="inline-flex items-center px-4 py-2 bg-zinc-700 text-zinc-300 rounded-lg hover:bg-zinc-600 transition-colors">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
                         Delete Problems
                     </a>
-                    <a href="setting.php" class="inline-flex items-center px-4 py-2 bg-zinc-700 text-zinc-300 rounded-lg hover:bg-zinc-600 transition-colors">
+                    <a href="setting.php"
+                        class="inline-flex items-center px-4 py-2 bg-zinc-700 text-zinc-300 rounded-lg hover:bg-zinc-600 transition-colors">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
                         Contest Settings
                     </a>
@@ -444,7 +541,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         <button type="button" onclick="addSampleCase()"
                             class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
                             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 4v16m8-8H4" />
                             </svg>
                             Add Example
                         </button>
@@ -487,14 +585,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label class="block text-sm font-medium text-zinc-300 mb-2">Generator (C++)</label>
-                                <div class="flex items-center justify-center w-full bg-zinc-800 border-2 border-dashed border-zinc-700 rounded-lg p-6">
+                                <div
+                                    class="flex items-center justify-center w-full bg-zinc-800 border-2 border-dashed border-zinc-700 rounded-lg p-6">
                                     <input type="file" name="generator" accept=".cpp" required
                                         class="block w-full text-sm text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-700">
                                 </div>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-zinc-300 mb-2">Solution (C++)</label>
-                                <div class="flex items-center justify-center w-full bg-zinc-800 border-2 border-dashed border-zinc-700 rounded-lg p-6">
+                                <div
+                                    class="flex items-center justify-center w-full bg-zinc-800 border-2 border-dashed border-zinc-700 rounded-lg p-6">
                                     <input type="file" name="solution" accept=".cpp" required
                                         class="block w-full text-sm text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-700">
                                 </div>
@@ -502,7 +602,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-zinc-300 mb-2">Problem Image (Optional)</label>
-                            <div class="flex items-center justify-center w-full bg-zinc-800 border-2 border-dashed border-zinc-700 rounded-lg p-6">
+                            <div
+                                class="flex items-center justify-center w-full bg-zinc-800 border-2 border-dashed border-zinc-700 rounded-lg p-6">
                                 <input type="file" name="problemImage" accept="image/*"
                                     class="block w-full text-sm text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-700">
                             </div>
@@ -522,4 +623,5 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <?php include('../Layout/footer.php'); ?>
     </footer>
 </body>
+
 </html>
