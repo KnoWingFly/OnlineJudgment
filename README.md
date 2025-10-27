@@ -20,7 +20,7 @@
 |----------|--------|-------|
 | WSL | Tested | Fully functional |
 | Windows Native | Not Tested | Testing needed |
-| Linux Native | Not Tested | Testing needed |
+| Linux Native | Tested | Fully functional |
 
 ## Important Warnings
 - **CRITICAL**: Do NOT run setup after the initial installation
@@ -51,5 +51,6 @@ Settings can be modified after installation by editing `settings.php`
 
 ---
 
-### Contributing
-Testing and verification on other platforms is welcome - please report any issues!
+### Problems (Happend in Internal Contest 2025):
+- [ ] Java Compiler
+- [ ] Python Compiler (idk, difference python = make errors)
